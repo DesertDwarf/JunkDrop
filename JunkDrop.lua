@@ -3,6 +3,25 @@
 -- Version: v0.8
 -- Released: 2012-09-11T03:27:01Z
 
+-- Container/item APIs moved into C_Container/C_Item in modern clients and the old
+-- globals are gone there. Bind locals so call sites below work on either API.
+local GetContainerNumSlots = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
+local GetContainerItemLink = C_Container and C_Container.GetContainerItemLink or GetContainerItemLink
+local PickupContainerItem = C_Container and C_Container.PickupContainerItem or PickupContainerItem
+local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+
+-- C_Container.GetContainerItemInfo returns a table; the legacy global returns multiple values.
+local function GetStackCount(bag, slot)
+  if C_Container and C_Container.GetContainerItemInfo then
+    local info = C_Container.GetContainerItemInfo(bag, slot)
+    return info and info.stackCount
+  end
+  return select(2, GetContainerItemInfo(bag, slot))
+end
+
+-- Retail added a reagent bag after the four regular bags; older clients stop at NUM_BAG_SLOTS.
+local LastBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag or NUM_BAG_SLOTS
+
 function JunkDrop(SlashArg)
   local EmergencyBreak = 9999 -- Prevent run-away train situation.
   local ItemLinkLowest
@@ -53,7 +72,7 @@ function JunkDrop(SlashArg)
     ChatFrame1:AddMessage("JunkDrop: Dropping all junk items!", .69, .49, 1.0)
   end
 
-  for bag = 0,4 do -- for bags loop
+  for bag = 0,LastBag do -- for bags loop
     for slot = 1,GetContainerNumSlots(bag) do -- for slots loop
       ItemLink = GetContainerItemLink(bag, slot)
       if ItemLink and select(3, GetItemInfo(ItemLink)) == 0 then -- is grey?
@@ -64,7 +83,7 @@ function JunkDrop(SlashArg)
           PickupContainerItem(bag, slot)
           DeleteCursorItem()
         else -- if all?
-          ItemCount = select(2, GetContainerItemInfo(bag, slot))
+          ItemCount = GetStackCount(bag, slot)
           if ItemLinkLowest then -- if lowest price item exists?
             if (select(11, GetItemInfo(ItemLink)) * ItemCount) < (select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest) then -- if new item is lower price?
               if DebugOn then -- if debug?
