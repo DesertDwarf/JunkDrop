@@ -1,4 +1,4 @@
-﻿-- JunkDrop.lua
+-- JunkDrop.lua
 -- by: desertdwarf
 -- Version: v0.8
 -- Released: 2012-09-11T03:27:01Z
@@ -20,136 +20,119 @@ local function GetStackCount(bag, slot)
 end
 
 -- Newer clients expose the coin formatter under C_CurrencyInfo; older ones only have the global.
+-- Formats a copper amount as gold/silver/copper coin icons for chat output.
 local GetCoinTextureString = C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString or GetCoinTextureString
-
--- Total vendor value of a stack as gold/silver/copper coin icons, for chat output.
-local function FormatValue(ItemLink, ItemCount)
-  return GetCoinTextureString(select(11, GetItemInfo(ItemLink)) * ItemCount)
-end
 
 -- Retail added a reagent bag after the four regular bags; older clients stop at NUM_BAG_SLOTS.
 local LastBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag or NUM_BAG_SLOTS
 
+local function Say(Message)
+  ChatFrame1:AddMessage("JunkDrop: " .. Message, .69, .49, 1.0)
+end
+
+local HelpLines = {
+  "Deletes your cheapest junk (grey) items. It does not sell them.",
+  "Usage: /junkdrop or /jd, followed by any of these options:",
+  "  (nothing) - delete the single cheapest junk stack.",
+  "  <number> - delete that many of the cheapest junk stacks, for example /jd 3.",
+  "  all - delete every junk item. Cannot be combined with a number.",
+  "  dry - only report what would be deleted; nothing is deleted.",
+  "  debug - list the junk stacks found, cheapest first, with their values.",
+  "  help - show this text.",
+  "Options can be combined, for example /jd 3 dry.",
+  "A stack is one bag slot, and its value is the vendor price of the whole stack.",
+}
+
+local function ShowHelp()
+  for _, Line in ipairs(HelpLines) do
+    Say(Line)
+  end
+end
+
 function JunkDrop(SlashArg)
-  local EmergencyBreak = 9999 -- Prevent run-away train situation.
-  local ItemLinkLowest
-  local ItemLinkLowestBag
-  local ItemLinkLowestSlot
-  local ItemCountLowest
-  local ItemLink
-  local ItemLinkBag
-  local ItemLinkSlot
-  local ItemCount
-  local CommandLine = {}
-  local SlashArgValue
   local DebugOn = false
   local DropAll = false
   local DryRun = false -- Report what would be dropped without deleting anything.
-  local DropVerb = "Dropping"
-  local CountToDrop
-  local index
-  local argument
-  local bag
-  local slot
+  local CountToDrop = 1
+  local CountGiven = false
 
-  if SlashArg then
-
-  for SlashArgValue in string.gmatch(SlashArg, "[^ ]+") do
-    tinsert(CommandLine, SlashArgValue)
-  end
-
---    ChatFrame1:AddMessage("JunkDrop: SlashArg - " .. SlashArg, .69, .49, 1.0)
-    for index,argument in pairs(CommandLine) do
---      ChatFrame1:AddMessage("JunkDrop: SlashArg Loop @ " .. index .. ": " .. argument, .69, .49, 1.0)
-      if argument == "debug" then
-        DebugOn = true
-      elseif argument == "dry" then
-        DryRun = true
-        DebugOn = true -- A dry run is only useful if it reports what it found.
-        DropVerb = "Would drop"
-      elseif argument == "all" then
-        DropAll = true
-      elseif string.len(argument) then
-        CountToDrop = tonumber(argument)
-        if CountToDrop ~= nil then
-          ChatFrame1:AddMessage("JunkDrop: When this option works, I'll throw away " .. CountToDrop .. " items.", .69, .49, 1.0)
-        else
-          if string.len(argument) > 0 then
-            ChatFrame1:AddMessage("JunkDrop: Command usage is /junkdrop [all] [debug] [dry] [#] -- where # is how many items to drop (not yet implemented). Found '" .. argument .. "'.", .69, .49, 1.0)
-            return -- Unknown argument: stop rather than guess and delete something.
-          end
-        end
+  for Argument in string.gmatch(string.lower(SlashArg or ""), "[^ ]+") do
+    if Argument == "debug" then
+      DebugOn = true
+    elseif Argument == "dry" then
+      DryRun = true
+      DebugOn = true -- A dry run is only useful if it reports what it found.
+    elseif Argument == "all" then
+      DropAll = true
+    elseif Argument == "help" or Argument == "?" then
+      ShowHelp()
+      return
+    elseif string.find(Argument, "^%d+$") then
+      CountToDrop = tonumber(Argument)
+      CountGiven = true
+      if CountToDrop < 1 then
+        Say("The number of stacks to drop must be 1 or more. Type /jd help for usage.")
+        return
       end
+    else
+      -- Unknown argument: stop rather than guess and delete something.
+      Say("Unknown option '" .. Argument .. "'. Type /jd help for usage.")
+      return
     end
   end
 
-  if DebugOn and DropAll then
-    ChatFrame1:AddMessage("JunkDrop: " .. DropVerb .. " all junk items!", .69, .49, 1.0)
+  if DropAll and CountGiven then
+    Say("'all' and a number cannot be combined. Type /jd help for usage.")
+    return
   end
 
-  for bag = 0,LastBag do -- for bags loop
-    for slot = 1,GetContainerNumSlots(bag) do -- for slots loop
-      ItemLink = GetContainerItemLink(bag, slot)
+  -- Collect every junk stack, then rank by the value of the whole stack.
+  local JunkStacks = {}
+  for Bag = 0, LastBag do
+    for Slot = 1, GetContainerNumSlots(Bag) do
+      local ItemLink = GetContainerItemLink(Bag, Slot)
       if ItemLink and select(3, GetItemInfo(ItemLink)) == 0 then -- is grey?
-        if DropAll then -- if all?
-          if DebugOn then -- if debug?
-            ChatFrame1:AddMessage("JunkDrop: " .. DropVerb .. " " .. ItemLink .. ".", .69, .49, 1.0)
-          end -- if debug?
-          if not DryRun then PickupContainerItem(bag, slot) end
-          if not DryRun then DeleteCursorItem() end
-        else -- if all?
-          ItemCount = GetStackCount(bag, slot)
-          if ItemLinkLowest then -- if lowest price item exists?
-            if (select(11, GetItemInfo(ItemLink)) * ItemCount) < (select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest) then -- if new item is lower price?
-              if DebugOn then -- if debug?
-                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. " > " .. ItemLink .. " x " .. ItemCount .. " @ " .. FormatValue(ItemLink, ItemCount) .. ".", .69, .49, 1.0)
-              end -- if debug?
-              ItemLinkLowest = ItemLink
-              ItemLinkLowestBag = bag
-              ItemLinkLowestSlot = slot
-              ItemCountLowest = ItemCount
-            else -- if new item is lower price?
-              if DebugOn then -- if debug?
-                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. " <= " .. ItemLink .. " x " .. ItemCount .. " @ " .. FormatValue(ItemLink, ItemCount) .. ".", .69, .49, 1.0)
-              end -- if debug?
-            end -- if new item is lower?
-          else -- if lowest price item exists?
-              if DebugOn then -- if debug?
-                ChatFrame1:AddMessage("JunkDrop: ---", .69, .49, 1.0)
-                ChatFrame1:AddMessage("JunkDrop: We found our first junk item: " .. ItemLink .. " x " .. ItemCount .. " @ " .. FormatValue(ItemLink, ItemCount) .. ".", .69, .49, 1.0)
-              end -- if debug?
-              ItemLinkLowest = ItemLink
-              ItemLinkLowestBag = bag
-              ItemLinkLowestSlot = slot
-              ItemCountLowest = ItemCount
-          end -- if lowest price item exists?
-        end -- if all?
-        EmergencyBreak = EmergencyBreak - 1
-        if EmergencyBreak == 0 then -- if emergencybreak for slots loop
-          ChatFrame1:AddMessage("JunkDrop: Emergency break applied. (Pun intended.) Report this to DesertDwarf on CurseForge.com on the JunkDrop addon page.", .69, .49, 1.0)
-          break
-        end -- if emergencybreak for slots loop
-      end -- if grey
-    end -- for slots loop
-    if EmergencyBreak == 0 then -- if emergencybreak for bags loop
-      ChatFrame1:AddMessage("JunkDrop: Emergency break applied. (Pun intended.) Report this to DesertDwarf on CurseForge.com on the JunkDrop addon page.", .69, .49, 1.0)
-      break
-    end -- if emergencybreak for bags loop
-  end -- for bags loop
-  
-  if ItemLinkLowest and not DropAll then
-    if DebugOn then
-      ChatFrame1:AddMessage("JunkDrop: " .. DropVerb .. " " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. ".", .69, .49, 1.0)
-    end
-    if not DryRun then PickupContainerItem(ItemLinkLowestBag, ItemLinkLowestSlot) end
-    if not DryRun then DeleteCursorItem() end
-  else
-    if DebugOn then
-      if DropAll then
-        ChatFrame1:AddMessage("JunkDrop: Done!", .69, .49, 1.0)
-      else
-        ChatFrame1:AddMessage("JunkDrop: We didn't find any junk.", .69, .49, 1.0)
+        local ItemCount = GetStackCount(Bag, Slot)
+        tinsert(JunkStacks, {
+          Link = ItemLink,
+          Bag = Bag,
+          Slot = Slot,
+          Count = ItemCount,
+          Value = select(11, GetItemInfo(ItemLink)) * ItemCount,
+          Order = #JunkStacks + 1, -- Scan order breaks ties; table.sort is not stable.
+        })
       end
+    end
+  end
+
+  table.sort(JunkStacks, function(A, B)
+    if A.Value ~= B.Value then
+      return A.Value < B.Value
+    end
+    return A.Order < B.Order
+  end)
+
+  local DropTotal = DropAll and #JunkStacks or math.min(CountToDrop, #JunkStacks)
+
+  if DebugOn then
+    if #JunkStacks == 0 then
+      Say("We didn't find any junk.")
+    else
+      Say("Found " .. #JunkStacks .. " junk stack(s), cheapest first:")
+      for Rank, Stack in ipairs(JunkStacks) do
+        local Marker = ""
+        if Rank <= DropTotal then
+          Marker = DryRun and " <-- would drop" or " <-- dropping"
+        end
+        Say(Rank .. ". " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. GetCoinTextureString(Stack.Value) .. Marker)
+      end
+    end
+  end
+
+  if not DryRun then
+    for Rank = 1, DropTotal do
+      PickupContainerItem(JunkStacks[Rank].Bag, JunkStacks[Rank].Slot)
+      DeleteCursorItem()
     end
   end
 end
