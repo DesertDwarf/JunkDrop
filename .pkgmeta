@@ -1,0 +1,11 @@
+package-as: JunkDrop
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - .github
+  - .gitattributes
+  - .gitignore
+  - libs/LibStub/tests

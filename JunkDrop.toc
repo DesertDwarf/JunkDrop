@@ -1,34 +1,28 @@
-## Interface: 120100, 16001, 11509
+## Interface: 11509, 16001, 120100
 ## Title: JunkDrop
-## Version: v0.8
+## Version: @project-version@
 ## Author: Ric Fischer playing Desertdwarf / Renewed Hope / US-Kirin Tor
 ## Notes: Drop the lowest-priced junk item in your inventory.
 ## email: addons@desertdwarf.com
-## URL: http://wow.curseforge.com/addons/junkdrop/
+## URL: https://github.com/DesertDwarf/JunkDrop
 ## X-Donate: PayPal: ric *AT* desertdwarf *DOT* com
-## X-Websiste: http://www.wowinterface.com/portal.php?&uid=148493
-## X-RelSite-Curse: 441365
-## X-RelSite-WoWI: 17410
+## X-Website: http://www.wowinterface.com/portal.php?&uid=148493
+## X-WoWI-ID: 17410
 ## X-CompatibleLocales: enUS
 ## X-Email: ric@desertdwarf.com
-## X-Feedback: http://wow.curseforge.com/addons/junkdrop/
+## X-Feedback: https://github.com/DesertDwarf/JunkDrop/issues
 ## X-License: GPL v3
 ## X-Localizations: enUS
-## X-ReleaseDate: 2012-09-11T03:27:01Z
 ## SavedVariables: JunkDropDB
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
-## X-Category: Bags & InventoryMain
+## X-Category: Bags & Inventory
 ## OptionalDeps: LibStub, CallbackHandler-1.0, EllesmereUI
-## X-Curse-Packaged-Version: v0.8
-## X-Curse-Project-Name: JunkDrop
-## X-Curse-Project-ID: junkdrop
-## X-Curse-Repository-ID: wow/junkdrop/mainline
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
-#@end-no-lib-strip@.
+#@end-no-lib-strip@
 
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 

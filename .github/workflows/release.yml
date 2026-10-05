@@ -1,0 +1,32 @@
+name: Package and release
+
+# Runs when a tag is pushed. Tags containing "alpha" or "beta" upload as that release type;
+# any other tag is a full release. Create annotated tags, for example:
+#   git tag -a v1.0.0-beta.1 -m "First beta" && git push origin v1.0.0-beta.1
+on:
+  push:
+    tags:
+      - '**'
+
+# Needed so the packager can attach the zip to a GitHub release.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    # The packager skips any site whose token or project id is missing.
+    env:
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # The packager reads tag history.
+
+      - name: Package and release
+        uses: BigWigsMods/packager@v2

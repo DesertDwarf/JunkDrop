@@ -1,7 +1,5 @@
 -- JunkDrop.lua
 -- by: desertdwarf
--- Version: v0.8
--- Released: 2012-09-11T03:27:01Z
 
 local _, JD = ... -- Addon name and the table shared between this addon's files.
 
