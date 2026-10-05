@@ -76,6 +76,7 @@ function JunkDrop(SlashArg)
         else
           if string.len(argument) > 0 then
             ChatFrame1:AddMessage("JunkDrop: Command usage is /junkdrop [all] [debug] [dry] [#] -- where # is how many items to drop (not yet implemented). Found '" .. argument .. "'.", .69, .49, 1.0)
+            return -- Unknown argument: stop rather than guess and delete something.
           end
         end
       end
