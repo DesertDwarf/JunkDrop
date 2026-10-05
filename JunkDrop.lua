@@ -3,6 +3,8 @@
 -- Version: v0.8
 -- Released: 2012-09-11T03:27:01Z
 
+local _, JD = ... -- Addon name and the table shared between this addon's files.
+
 -- Container/item APIs moved into C_Container/C_Item in modern clients and the old
 -- globals are gone there. Bind locals so call sites below work on either API.
 local GetContainerNumSlots = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
@@ -50,6 +52,45 @@ local function ShowHelp()
   end
 end
 
+-- Every junk (grey) stack in the bags, ranked by the vendor value of the whole stack,
+-- cheapest first. Shared by the slash command and the LDB display.
+local function GetJunkStacks()
+  local JunkStacks = {}
+  for Bag = 0, LastBag do
+    for Slot = 1, GetContainerNumSlots(Bag) do
+      local ItemLink = GetContainerItemLink(Bag, Slot)
+      if ItemLink then
+        local Name, _, Quality, _, _, _, _, _, _, _, SellPrice = GetItemInfo(ItemLink)
+        if Quality == 0 then -- is grey?
+          local ItemCount = GetStackCount(Bag, Slot)
+          tinsert(JunkStacks, {
+            Link = ItemLink,
+            Name = Name,
+            Bag = Bag,
+            Slot = Slot,
+            Count = ItemCount,
+            Value = SellPrice * ItemCount,
+            Order = #JunkStacks + 1, -- Scan order breaks ties; table.sort is not stable.
+          })
+        end
+      end
+    end
+  end
+
+  table.sort(JunkStacks, function(A, B)
+    if A.Value ~= B.Value then
+      return A.Value < B.Value
+    end
+    return A.Order < B.Order
+  end)
+
+  return JunkStacks
+end
+
+-- The LDB file is loaded after this one and shares these through the addon table.
+JD.GetJunkStacks = GetJunkStacks
+JD.FormatCoins = GetCoinTextureString
+
 function JunkDrop(SlashArg)
   local DebugOn = false
   local DropAll = false
@@ -86,32 +127,7 @@ function JunkDrop(SlashArg)
     return
   end
 
-  -- Collect every junk stack, then rank by the value of the whole stack.
-  local JunkStacks = {}
-  for Bag = 0, LastBag do
-    for Slot = 1, GetContainerNumSlots(Bag) do
-      local ItemLink = GetContainerItemLink(Bag, Slot)
-      if ItemLink and select(3, GetItemInfo(ItemLink)) == 0 then -- is grey?
-        local ItemCount = GetStackCount(Bag, Slot)
-        tinsert(JunkStacks, {
-          Link = ItemLink,
-          Bag = Bag,
-          Slot = Slot,
-          Count = ItemCount,
-          Value = select(11, GetItemInfo(ItemLink)) * ItemCount,
-          Order = #JunkStacks + 1, -- Scan order breaks ties; table.sort is not stable.
-        })
-      end
-    end
-  end
-
-  table.sort(JunkStacks, function(A, B)
-    if A.Value ~= B.Value then
-      return A.Value < B.Value
-    end
-    return A.Order < B.Order
-  end)
-
+  local JunkStacks = GetJunkStacks()
   local DropTotal = DropAll and #JunkStacks or math.min(CountToDrop, #JunkStacks)
 
   if DebugOn or ListOnly then
