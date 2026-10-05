@@ -44,6 +44,8 @@ function JunkDrop(SlashArg)
   local SlashArgValue
   local DebugOn = false
   local DropAll = false
+  local DryRun = false -- Report what would be dropped without deleting anything.
+  local DropVerb = "Dropping"
   local CountToDrop
   local index
   local argument
@@ -61,6 +63,10 @@ function JunkDrop(SlashArg)
 --      ChatFrame1:AddMessage("JunkDrop: SlashArg Loop @ " .. index .. ": " .. argument, .69, .49, 1.0)
       if argument == "debug" then
         DebugOn = true
+      elseif argument == "dry" then
+        DryRun = true
+        DebugOn = true -- A dry run is only useful if it reports what it found.
+        DropVerb = "Would drop"
       elseif argument == "all" then
         DropAll = true
       elseif string.len(argument) then
@@ -69,7 +75,7 @@ function JunkDrop(SlashArg)
           ChatFrame1:AddMessage("JunkDrop: When this option works, I'll throw away " .. CountToDrop .. " items.", .69, .49, 1.0)
         else
           if string.len(argument) > 0 then
-            ChatFrame1:AddMessage("JunkDrop: Command usage is /junkdrop [all] [debug] [#] -- where # is how many items to drop (not yet implemented). Found '" .. argument .. "'.", .69, .49, 1.0)
+            ChatFrame1:AddMessage("JunkDrop: Command usage is /junkdrop [all] [debug] [dry] [#] -- where # is how many items to drop (not yet implemented). Found '" .. argument .. "'.", .69, .49, 1.0)
           end
         end
       end
@@ -77,7 +83,7 @@ function JunkDrop(SlashArg)
   end
 
   if DebugOn and DropAll then
-    ChatFrame1:AddMessage("JunkDrop: Dropping all junk items!", .69, .49, 1.0)
+    ChatFrame1:AddMessage("JunkDrop: " .. DropVerb .. " all junk items!", .69, .49, 1.0)
   end
 
   for bag = 0,LastBag do -- for bags loop
@@ -86,10 +92,10 @@ function JunkDrop(SlashArg)
       if ItemLink and select(3, GetItemInfo(ItemLink)) == 0 then -- is grey?
         if DropAll then -- if all?
           if DebugOn then -- if debug?
-            ChatFrame1:AddMessage("JunkDrop: Dropping " .. ItemLink .. ".", .69, .49, 1.0)
+            ChatFrame1:AddMessage("JunkDrop: " .. DropVerb .. " " .. ItemLink .. ".", .69, .49, 1.0)
           end -- if debug?
-          PickupContainerItem(bag, slot)
-          DeleteCursorItem()
+          if not DryRun then PickupContainerItem(bag, slot) end
+          if not DryRun then DeleteCursorItem() end
         else -- if all?
           ItemCount = GetStackCount(bag, slot)
           if ItemLinkLowest then -- if lowest price item exists?
@@ -132,10 +138,10 @@ function JunkDrop(SlashArg)
   
   if ItemLinkLowest and not DropAll then
     if DebugOn then
-      ChatFrame1:AddMessage("JunkDrop: Dropping " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. ".", .69, .49, 1.0)
+      ChatFrame1:AddMessage("JunkDrop: " .. DropVerb .. " " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. ".", .69, .49, 1.0)
     end
-    PickupContainerItem(ItemLinkLowestBag, ItemLinkLowestSlot)
-    DeleteCursorItem()
+    if not DryRun then PickupContainerItem(ItemLinkLowestBag, ItemLinkLowestSlot) end
+    if not DryRun then DeleteCursorItem() end
   else
     if DebugOn then
       if DropAll then
