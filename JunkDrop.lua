@@ -93,6 +93,10 @@ function JunkDrop(SlashArg)
               ItemLinkLowestBag = bag
               ItemLinkLowestSlot = slot
               ItemCountLowest = ItemCount
+            else -- if new item is lower price?
+              if DebugOn then -- if debug?
+                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest .. " <= " .. ItemLink .. " x " .. ItemCount .. " @ " .. select(11, GetItemInfo(ItemLink)) * ItemCount .. ".", .69, .49, 1.0)
+              end -- if debug?
             end -- if new item is lower?
           else -- if lowest price item exists?
               if DebugOn then -- if debug?
