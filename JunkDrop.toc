@@ -15,10 +15,11 @@
 ## X-License: GPL v3
 ## X-Localizations: enUS
 ## X-ReleaseDate: 2012-09-11T03:27:01Z
+## SavedVariables: JunkDropDB
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
 ## X-Category: Bags & InventoryMain
-## OptionalDeps: LibStub, CallbackHandler-1.0
+## OptionalDeps: LibStub, CallbackHandler-1.0, EllesmereUI
 ## X-Curse-Packaged-Version: v0.8
 ## X-Curse-Project-Name: JunkDrop
 ## X-Curse-Project-ID: junkdrop
@@ -32,4 +33,5 @@ libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 
 JunkDrop.lua
+Options.lua
 JunkDrop-LDB.lua

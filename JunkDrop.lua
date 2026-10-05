@@ -22,8 +22,61 @@ local function GetStackCount(bag, slot)
 end
 
 -- Newer clients expose the coin formatter under C_CurrencyInfo; older ones only have the global.
--- Formats a copper amount as gold/silver/copper coin icons for chat output.
 local GetCoinTextureString = C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString or GetCoinTextureString
+
+-- Saved settings live in JunkDropDB (declared in the TOC). The client fills that table in after
+-- this file runs, so reads fall back to the defaults until then.
+JD.Defaults = {
+  Label = "full", -- Text before the item on LDB displays: "full" (JunkDrop), "short" (JD) or "none".
+  Show = "both", -- What LDB displays show: "both" (item name and value), "value" or "name".
+  ShowCount = true, -- Append the stack size (x3) when a stack holds more than one item.
+  Coins = "icons", -- Coin style: "icons" or "letters" (1g 2s 3c).
+  TooltipRows = 5, -- Cheapest stacks listed in the LDB tooltip.
+  ConfirmClick = false, -- Ask before an LDB click deletes anything.
+  ReportDrops = true, -- Print each deleted stack to chat.
+}
+
+local function SettingsChanged()
+  if JD.RefreshText then
+    JD.RefreshText()
+  end
+end
+
+function JD.Get(Key)
+  local Value = JunkDropDB and JunkDropDB[Key]
+  if Value == nil then
+    return JD.Defaults[Key]
+  end
+  return Value
+end
+
+function JD.Set(Key, Value)
+  JunkDropDB = JunkDropDB or {}
+  JunkDropDB[Key] = Value
+  SettingsChanged()
+end
+
+function JD.Reset()
+  JunkDropDB = {}
+  SettingsChanged()
+end
+
+-- Formats a copper amount as coins, in the style chosen in the settings.
+local function FormatCoins(Amount)
+  if JD.Get("Coins") == "icons" then
+    return GetCoinTextureString(Amount)
+  end
+  local Gold = math.floor(Amount / 10000)
+  local Silver = math.floor((Amount % 10000) / 100)
+  local Text = ""
+  if Gold > 0 then
+    Text = Gold .. "|cffffd700g|r "
+  end
+  if Gold > 0 or Silver > 0 then
+    Text = Text .. Silver .. "|cffc7c7cfs|r "
+  end
+  return Text .. (Amount % 100) .. "|cffeda55fc|r"
+end
 
 -- Retail added a reagent bag after the four regular bags; older clients stop at NUM_BAG_SLOTS.
 local LastBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag or NUM_BAG_SLOTS
@@ -41,6 +94,7 @@ local HelpLines = {
   "  list - delete nothing; show the cheapest junk stack. Use it to decide whether a new grey is worth looting.",
   "  list <number> or list all - show that many of the cheapest stacks, or every junk stack.",
   "  debug - show every junk stack found, cheapest first, and mark the ones that are or would be dropped.",
+  "  options - open the settings window (also: right-click the LDB item).",
   "  help - show this text.",
   "Options can be combined, for example /jd list 3 or /jd 3 debug.",
   "A stack is one bag slot, and its value is the vendor price of the whole stack.",
@@ -89,7 +143,7 @@ end
 
 -- The LDB file is loaded after this one and shares these through the addon table.
 JD.GetJunkStacks = GetJunkStacks
-JD.FormatCoins = GetCoinTextureString
+JD.FormatCoins = FormatCoins
 
 function JunkDrop(SlashArg)
   local DebugOn = false
@@ -105,6 +159,9 @@ function JunkDrop(SlashArg)
       ListOnly = true
     elseif Argument == "all" then
       DropAll = true
+    elseif Argument == "options" then
+      JD.OpenOptions()
+      return
     elseif Argument == "help" or Argument == "?" then
       ShowHelp()
       return
@@ -136,7 +193,7 @@ function JunkDrop(SlashArg)
     elseif ListOnly and not DebugOn and DropTotal == 1 then
       -- The common farming check: one line to compare a new grey against.
       local Stack = JunkStacks[1]
-      Say("Cheapest junk stack: " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. GetCoinTextureString(Stack.Value))
+      Say("Cheapest junk stack: " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value))
     else
       -- Debug shows every stack so the selection can be checked; list shows only the selection.
       local Shown = DebugOn and #JunkStacks or DropTotal
@@ -153,7 +210,7 @@ function JunkDrop(SlashArg)
         if DebugOn and Rank <= DropTotal then
           Marker = ListOnly and " <-- would drop" or " <-- dropping"
         end
-        Say(Rank .. ". " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. GetCoinTextureString(Stack.Value) .. Marker)
+        Say(Rank .. ". " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value) .. Marker)
       end
     end
   end
@@ -162,6 +219,10 @@ function JunkDrop(SlashArg)
     for Rank = 1, DropTotal do
       PickupContainerItem(JunkStacks[Rank].Bag, JunkStacks[Rank].Slot)
       DeleteCursorItem()
+      if JD.Get("ReportDrops") and not DebugOn then -- Debug already lists what is dropped.
+        local Stack = JunkStacks[Rank]
+        Say("Deleted " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value))
+      end
     end
   end
 end
