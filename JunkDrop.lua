@@ -36,10 +36,11 @@ local HelpLines = {
   "  (nothing) - delete the single cheapest junk stack.",
   "  <number> - delete that many of the cheapest junk stacks, for example /jd 3.",
   "  all - delete every junk item. Cannot be combined with a number.",
-  "  dry - only report what would be deleted; nothing is deleted.",
-  "  debug - list the junk stacks found, cheapest first, with their values.",
+  "  list - delete nothing; show the cheapest junk stack. Use it to decide whether a new grey is worth looting.",
+  "  list <number> or list all - show that many of the cheapest stacks, or every junk stack.",
+  "  debug - show every junk stack found, cheapest first, and mark the ones that are or would be dropped.",
   "  help - show this text.",
-  "Options can be combined, for example /jd 3 dry.",
+  "Options can be combined, for example /jd list 3 or /jd 3 debug.",
   "A stack is one bag slot, and its value is the vendor price of the whole stack.",
 }
 
@@ -52,16 +53,15 @@ end
 function JunkDrop(SlashArg)
   local DebugOn = false
   local DropAll = false
-  local DryRun = false -- Report what would be dropped without deleting anything.
+  local ListOnly = false -- Report what a normal run would drop without deleting anything.
   local CountToDrop = 1
   local CountGiven = false
 
   for Argument in string.gmatch(string.lower(SlashArg or ""), "[^ ]+") do
     if Argument == "debug" then
       DebugOn = true
-    elseif Argument == "dry" then
-      DryRun = true
-      DebugOn = true -- A dry run is only useful if it reports what it found.
+    elseif Argument == "list" then
+      ListOnly = true
     elseif Argument == "all" then
       DropAll = true
     elseif Argument == "help" or Argument == "?" then
@@ -114,22 +114,35 @@ function JunkDrop(SlashArg)
 
   local DropTotal = DropAll and #JunkStacks or math.min(CountToDrop, #JunkStacks)
 
-  if DebugOn then
+  if DebugOn or ListOnly then
     if #JunkStacks == 0 then
       Say("We didn't find any junk.")
+    elseif ListOnly and not DebugOn and DropTotal == 1 then
+      -- The common farming check: one line to compare a new grey against.
+      local Stack = JunkStacks[1]
+      Say("Cheapest junk stack: " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. GetCoinTextureString(Stack.Value))
     else
-      Say("Found " .. #JunkStacks .. " junk stack(s), cheapest first:")
-      for Rank, Stack in ipairs(JunkStacks) do
+      -- Debug shows every stack so the selection can be checked; list shows only the selection.
+      local Shown = DebugOn and #JunkStacks or DropTotal
+      if DebugOn then
+        Say("Found " .. #JunkStacks .. " junk stack(s), cheapest first:")
+      elseif DropAll then
+        Say("All " .. #JunkStacks .. " junk stack(s), cheapest first:")
+      else
+        Say("The " .. DropTotal .. " cheapest junk stack(s):")
+      end
+      for Rank = 1, Shown do
+        local Stack = JunkStacks[Rank]
         local Marker = ""
-        if Rank <= DropTotal then
-          Marker = DryRun and " <-- would drop" or " <-- dropping"
+        if DebugOn and Rank <= DropTotal then
+          Marker = ListOnly and " <-- would drop" or " <-- dropping"
         end
         Say(Rank .. ". " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. GetCoinTextureString(Stack.Value) .. Marker)
       end
     end
   end
 
-  if not DryRun then
+  if not ListOnly then
     for Rank = 1, DropTotal do
       PickupContainerItem(JunkStacks[Rank].Bag, JunkStacks[Rank].Slot)
       DeleteCursorItem()
