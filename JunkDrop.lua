@@ -19,6 +19,14 @@ local function GetStackCount(bag, slot)
   return select(2, GetContainerItemInfo(bag, slot))
 end
 
+-- Newer clients expose the coin formatter under C_CurrencyInfo; older ones only have the global.
+local GetCoinTextureString = C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString or GetCoinTextureString
+
+-- Total vendor value of a stack as gold/silver/copper coin icons, for chat output.
+local function FormatValue(ItemLink, ItemCount)
+  return GetCoinTextureString(select(11, GetItemInfo(ItemLink)) * ItemCount)
+end
+
 -- Retail added a reagent bag after the four regular bags; older clients stop at NUM_BAG_SLOTS.
 local LastBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag or NUM_BAG_SLOTS
 
@@ -87,7 +95,7 @@ function JunkDrop(SlashArg)
           if ItemLinkLowest then -- if lowest price item exists?
             if (select(11, GetItemInfo(ItemLink)) * ItemCount) < (select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest) then -- if new item is lower price?
               if DebugOn then -- if debug?
-                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest .. " > " .. ItemLink .. " x " .. ItemCount .. " @ " .. select(11, GetItemInfo(ItemLink)) * ItemCount .. ".", .69, .49, 1.0)
+                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. " > " .. ItemLink .. " x " .. ItemCount .. " @ " .. FormatValue(ItemLink, ItemCount) .. ".", .69, .49, 1.0)
               end -- if debug?
               ItemLinkLowest = ItemLink
               ItemLinkLowestBag = bag
@@ -95,13 +103,13 @@ function JunkDrop(SlashArg)
               ItemCountLowest = ItemCount
             else -- if new item is lower price?
               if DebugOn then -- if debug?
-                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest .. " <= " .. ItemLink .. " x " .. ItemCount .. " @ " .. select(11, GetItemInfo(ItemLink)) * ItemCount .. ".", .69, .49, 1.0)
+                ChatFrame1:AddMessage("JunkDrop: " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. " <= " .. ItemLink .. " x " .. ItemCount .. " @ " .. FormatValue(ItemLink, ItemCount) .. ".", .69, .49, 1.0)
               end -- if debug?
             end -- if new item is lower?
           else -- if lowest price item exists?
               if DebugOn then -- if debug?
                 ChatFrame1:AddMessage("JunkDrop: ---", .69, .49, 1.0)
-                ChatFrame1:AddMessage("JunkDrop: We found our first junk item: " .. ItemLink .. " x " .. ItemCount .. " @ " .. select(11, GetItemInfo(ItemLink)) * ItemCount .. ".", .69, .49, 1.0)
+                ChatFrame1:AddMessage("JunkDrop: We found our first junk item: " .. ItemLink .. " x " .. ItemCount .. " @ " .. FormatValue(ItemLink, ItemCount) .. ".", .69, .49, 1.0)
               end -- if debug?
               ItemLinkLowest = ItemLink
               ItemLinkLowestBag = bag
@@ -124,7 +132,7 @@ function JunkDrop(SlashArg)
   
   if ItemLinkLowest and not DropAll then
     if DebugOn then
-      ChatFrame1:AddMessage("JunkDrop: Dropping " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. select(11, GetItemInfo(ItemLinkLowest)) * ItemCountLowest .. ".", .69, .49, 1.0)
+      ChatFrame1:AddMessage("JunkDrop: Dropping " .. ItemLinkLowest .. " x " .. ItemCountLowest .. " @ " .. FormatValue(ItemLinkLowest, ItemCountLowest) .. ".", .69, .49, 1.0)
     end
     PickupContainerItem(ItemLinkLowestBag, ItemLinkLowestSlot)
     DeleteCursorItem()
