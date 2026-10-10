@@ -12,6 +12,8 @@ Updated for current World of Warcraft, with new features.
 - Values are shown as gold, silver and copper.
 - The LDB item now shows the cheapest junk stack beside its name and lists the cheapest few stacks in its tooltip.
 - New settings window (`/jd options`, or right-click the LDB item): label, value-only display, stack size, coin style, tooltip rows, confirmation before deleting, and chat reports of deleted items. It follows your EllesmereUI theme when that addon is installed.
+- Choose which item qualities may be dropped: Poor (the default), Common, Uncommon, Rare and Epic. Drop order is either lowest quality first, or cheapest price first regardless of quality. Anything better than Poor asks for confirmation unless you turn that off.
+- Items better than Poor must have a vendor price and are never quest items, so things like the Hearthstone are never picked.
 - Fixed: the reagent bag is now scanned on retail.
 
 ## v0.8

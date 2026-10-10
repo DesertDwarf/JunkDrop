@@ -49,7 +49,8 @@ local broker = ldb:NewDataObject("JunkDrop-LDB", {
 	OnClick = function(_, msg)
 		if msg == "LeftButton" then -- Left mouse button to call JunkDrop
 			local Stack = JD.GetJunkStacks()[1]
-			if Stack and JD.Get("ConfirmClick") then
+			-- Anything better than Poor is confirmed by JunkDrop() itself, so only ask here for Poor.
+			if Stack and Stack.Quality == 0 and JD.Get("ConfirmClick") then
 				StaticPopup_Show("JUNKDROP_CONFIRM", Stack.Link .. " x" .. Stack.Count .. " (" .. JD.FormatCoins(Stack.Value) .. ")")
 			else
 				JunkDrop()
@@ -66,9 +67,9 @@ local broker = ldb:NewDataObject("JunkDrop-LDB", {
 		local Rows = JD.Get("TooltipRows")
 		tooltip:AddLine("JunkDrop")
 		if #JunkStacks == 0 then
-			tooltip:AddLine("No junk in your bags.", 1, 1, 1)
+			tooltip:AddLine("Nothing to drop in your bags.", 1, 1, 1)
 		else
-			tooltip:AddLine("Cheapest junk stacks:", 1, 1, 1)
+			tooltip:AddLine("Next to be dropped:", 1, 1, 1)
 			for Rank = 1, math.min(Rows, #JunkStacks) do
 				local Stack = JunkStacks[Rank]
 				local Name = Stack.Link
@@ -82,7 +83,7 @@ local broker = ldb:NewDataObject("JunkDrop-LDB", {
 			end
 		end
 		tooltip:AddLine(" ")
-		tooltip:AddLine("Left-click: delete the cheapest junk stack. This cannot be undone.", 0, 1, 0, true)
+		tooltip:AddLine("Left-click: delete the first stack listed. This cannot be undone.", 0, 1, 0, true)
 		tooltip:AddLine("Right-click: options. Type /jd help for commands.", .6, .6, .6)
 	end,
 })

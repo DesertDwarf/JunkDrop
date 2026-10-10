@@ -32,6 +32,13 @@ JD.Defaults = {
   TooltipRows = 5, -- Cheapest stacks listed in the LDB tooltip.
   ConfirmClick = false, -- Ask before an LDB click deletes anything.
   ReportDrops = true, -- Print each deleted stack to chat.
+  Include0 = true, -- Item qualities that may be dropped: 0 Poor (grey), 1 Common, 2 Uncommon,
+  Include1 = false, -- 3 Rare, 4 Epic. Only Poor is on by default.
+  Include2 = false,
+  Include3 = false,
+  Include4 = false,
+  Order = "quality", -- Drop order: "quality" (lowest quality first, then cheapest) or "price" (cheapest first).
+  ConfirmHigher = true, -- Ask before deleting anything better than Poor.
 }
 
 local function SettingsChanged()
@@ -84,14 +91,15 @@ local function Say(Message)
 end
 
 local HelpLines = {
-  "Deletes your cheapest junk (grey) items. It does not sell them.",
+  "Deletes the lowest-value items in your bags. It does not sell them.",
+  "Only Poor (grey) items are considered unless you choose other qualities in /jd options.",
   "Usage: /junkdrop or /jd, followed by any of these options:",
-  "  (nothing) - delete the single cheapest junk stack.",
-  "  <number> - delete that many of the cheapest junk stacks, for example /jd 3.",
-  "  all - delete every junk item. Cannot be combined with a number.",
-  "  list - delete nothing; show the cheapest junk stack. Use it to decide whether a new grey is worth looting.",
-  "  list <number> or list all - show that many of the cheapest stacks, or every junk stack.",
-  "  debug - show every junk stack found, cheapest first, and mark the ones that are or would be dropped.",
+  "  (nothing) - delete the next stack in line.",
+  "  <number> - delete that many stacks, for example /jd 3.",
+  "  all - delete every stack that qualifies. Cannot be combined with a number.",
+  "  list - delete nothing; show the next stack in line. Use it to decide whether a new item is worth looting.",
+  "  list <number> or list all - show that many stacks, or every stack, in drop order.",
+  "  debug - show every stack found, in drop order, and mark the ones that are or would be dropped.",
   "  options - open the settings window (also: right-click the LDB item).",
   "  help - show this text.",
   "Options can be combined, for example /jd list 3 or /jd 3 debug.",
@@ -104,20 +112,38 @@ local function ShowHelp()
   end
 end
 
--- Every junk (grey) stack in the bags, ranked by the vendor value of the whole stack,
--- cheapest first. Shared by the slash command and the LDB display.
+local QuestClassID = Enum and Enum.ItemClass and Enum.ItemClass.Questitem or 12
+
+-- Whether an item may be dropped under the current settings. Anything better than Poor must
+-- also have a vendor price and not be a quest item. That keeps things like the Hearthstone,
+-- which sells for nothing, from looking like the cheapest item in the bags.
+local function IsCandidate(Quality, SellPrice, ClassID)
+  if not Quality or not JD.Get("Include" .. Quality) then
+    return false
+  end
+  if Quality == 0 then
+    return true
+  end
+  return SellPrice > 0 and ClassID ~= QuestClassID
+end
+
+-- Every stack in the bags that may be dropped, in the order they would be dropped. The order is
+-- lowest quality first or cheapest first, per the settings, and a stack's value is the vendor
+-- price of the whole stack. Shared by the slash command and the LDB display, which still call
+-- these "junk" stacks even when the settings let in better qualities.
 local function GetJunkStacks()
   local JunkStacks = {}
   for Bag = 0, LastBag do
     for Slot = 1, GetContainerNumSlots(Bag) do
       local ItemLink = GetContainerItemLink(Bag, Slot)
       if ItemLink then
-        local Name, _, Quality, _, _, _, _, _, _, _, SellPrice = GetItemInfo(ItemLink)
-        if Quality == 0 then -- is grey?
+        local Name, _, Quality, _, _, _, _, _, _, _, SellPrice, ClassID = GetItemInfo(ItemLink)
+        if IsCandidate(Quality, SellPrice, ClassID) then
           local ItemCount = GetStackCount(Bag, Slot)
           tinsert(JunkStacks, {
             Link = ItemLink,
             Name = Name,
+            Quality = Quality,
             Bag = Bag,
             Slot = Slot,
             Count = ItemCount,
@@ -129,15 +155,48 @@ local function GetJunkStacks()
     end
   end
 
+  local ByPrice = JD.Get("Order") == "price"
   table.sort(JunkStacks, function(A, B)
+    if not ByPrice and A.Quality ~= B.Quality then
+      return A.Quality < B.Quality
+    end
     if A.Value ~= B.Value then
       return A.Value < B.Value
+    end
+    if A.Quality ~= B.Quality then
+      return A.Quality < B.Quality
     end
     return A.Order < B.Order
   end)
 
   return JunkStacks
 end
+
+-- Delete the given stacks. A slot is skipped if it no longer holds the item it held when the
+-- stacks were ranked, which matters when the deletion waits on a confirmation window.
+local function DeleteStacks(Stacks, Report)
+  for _, Stack in ipairs(Stacks) do
+    if GetContainerItemLink(Stack.Bag, Stack.Slot) == Stack.Link then
+      PickupContainerItem(Stack.Bag, Stack.Slot)
+      DeleteCursorItem()
+      if Report then
+        Say("Deleted " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value))
+      end
+    end
+  end
+end
+
+StaticPopupDialogs["JUNKDROP_CONFIRM_RUN"] = {
+  text = "JunkDrop will delete:\n%s\nThis cannot be undone.",
+  button1 = YES,
+  button2 = NO,
+  OnAccept = function(_, Stacks)
+    DeleteStacks(Stacks, JD.Get("ReportDrops"))
+  end,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+}
 
 -- The LDB file is loaded after this one and shares these through the addon table.
 JD.GetJunkStacks = GetJunkStacks
@@ -187,20 +246,20 @@ function JunkDrop(SlashArg)
 
   if DebugOn or ListOnly then
     if #JunkStacks == 0 then
-      Say("We didn't find any junk.")
+      Say("We didn't find anything to drop.")
     elseif ListOnly and not DebugOn and DropTotal == 1 then
-      -- The common farming check: one line to compare a new grey against.
+      -- The common farming check: one line to compare a new item against.
       local Stack = JunkStacks[1]
-      Say("Cheapest junk stack: " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value))
+      Say("Next to drop: " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value))
     else
       -- Debug shows every stack so the selection can be checked; list shows only the selection.
       local Shown = DebugOn and #JunkStacks or DropTotal
       if DebugOn then
-        Say("Found " .. #JunkStacks .. " junk stack(s), cheapest first:")
+        Say("Found " .. #JunkStacks .. " stack(s), in drop order:")
       elseif DropAll then
-        Say("All " .. #JunkStacks .. " junk stack(s), cheapest first:")
+        Say("All " .. #JunkStacks .. " stack(s), in drop order:")
       else
-        Say("The " .. DropTotal .. " cheapest junk stack(s):")
+        Say("The next " .. DropTotal .. " stack(s) to drop:")
       end
       for Rank = 1, Shown do
         local Stack = JunkStacks[Rank]
@@ -214,13 +273,27 @@ function JunkDrop(SlashArg)
   end
 
   if not ListOnly then
+    local Targets = {}
+    local HasBetterThanPoor = false
     for Rank = 1, DropTotal do
-      PickupContainerItem(JunkStacks[Rank].Bag, JunkStacks[Rank].Slot)
-      DeleteCursorItem()
-      if JD.Get("ReportDrops") and not DebugOn then -- Debug already lists what is dropped.
-        local Stack = JunkStacks[Rank]
-        Say("Deleted " .. Stack.Link .. " x " .. Stack.Count .. " @ " .. FormatCoins(Stack.Value))
+      tinsert(Targets, JunkStacks[Rank])
+      if JunkStacks[Rank].Quality > 0 then
+        HasBetterThanPoor = true
       end
+    end
+
+    if HasBetterThanPoor and JD.Get("ConfirmHigher") then
+      -- Show exactly what will go, and delete exactly that if the player agrees.
+      local Lines = {}
+      for Rank = 1, math.min(#Targets, 6) do
+        tinsert(Lines, Targets[Rank].Link .. " x" .. Targets[Rank].Count)
+      end
+      if #Targets > 6 then
+        tinsert(Lines, "...and " .. (#Targets - 6) .. " more")
+      end
+      StaticPopup_Show("JUNKDROP_CONFIRM_RUN", table.concat(Lines, "\n"), nil, Targets)
+    else
+      DeleteStacks(Targets, JD.Get("ReportDrops") and not DebugOn) -- Debug already lists what is dropped.
     end
   end
 end
