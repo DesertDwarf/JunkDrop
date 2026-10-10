@@ -40,6 +40,7 @@ JD.Defaults = {
   Include4 = false,
   Order = "quality", -- Drop order: "quality" (lowest quality first, then cheapest) or "price" (cheapest first).
   ConfirmHigher = true, -- Ask before deleting anything better than Poor.
+  Protect = "", -- Comma-separated words; an item whose name contains one is never dropped.
 }
 
 local function SettingsChanged()
@@ -94,6 +95,7 @@ end
 local HelpLines = {
   "Deletes the lowest-value items in your bags. It does not sell them.",
   "Only Poor (grey) items are considered unless you choose other qualities in /jd options.",
+  "Items whose names match the Never drop words in /jd options are always skipped.",
   "Usage: /junkdrop or /jd, followed by any of these options:",
   "  (nothing) - delete the next stack in line.",
   "  <number> - delete that many stacks, for example /jd 3.",
@@ -111,6 +113,44 @@ local function ShowHelp()
   for _, Line in ipairs(HelpLines) do
     Say(Line)
   end
+end
+
+-- Calls Visit(Bag, Slot, ItemLink) for every item in the bags.
+local function ForEachBagItem(Visit)
+  for Bag = 0, LastBag do
+    for Slot = 1, GetContainerNumSlots(Bag) do
+      local ItemLink = GetContainerItemLink(Bag, Slot)
+      if ItemLink then
+        Visit(Bag, Slot, ItemLink)
+      end
+    end
+  end
+end
+
+-- Split the "never drop" setting into lowercase words. Commas separate the words.
+local function ParseTerms(Text)
+  local Terms = {}
+  for Raw in string.gmatch(Text or "", "[^,]+") do
+    local Term = string.match(Raw, "^%s*(.-)%s*$")
+    if Term ~= "" then
+      tinsert(Terms, string.lower(Term))
+    end
+  end
+  return Terms
+end
+
+-- Whether any word appears anywhere in the item's name, ignoring case.
+local function MatchesTerms(Name, Terms)
+  if not Name then
+    return false
+  end
+  local Lower = string.lower(Name)
+  for _, Term in ipairs(Terms) do
+    if string.find(Lower, Term, 1, true) then -- Plain text, not a pattern.
+      return true
+    end
+  end
+  return false
 end
 
 local QuestClassID = Enum and Enum.ItemClass and Enum.ItemClass.Questitem or 12
@@ -134,27 +174,23 @@ end
 -- these "junk" stacks even when the settings let in better qualities.
 local function GetJunkStacks()
   local JunkStacks = {}
-  for Bag = 0, LastBag do
-    for Slot = 1, GetContainerNumSlots(Bag) do
-      local ItemLink = GetContainerItemLink(Bag, Slot)
-      if ItemLink then
-        local Name, _, Quality, _, _, _, _, _, _, _, SellPrice, ClassID = GetItemInfo(ItemLink)
-        if IsCandidate(Quality, SellPrice, ClassID) then
-          local ItemCount = GetStackCount(Bag, Slot)
-          tinsert(JunkStacks, {
-            Link = ItemLink,
-            Name = Name,
-            Quality = Quality,
-            Bag = Bag,
-            Slot = Slot,
-            Count = ItemCount,
-            Value = SellPrice * ItemCount,
-            Order = #JunkStacks + 1, -- Scan order breaks ties; table.sort is not stable.
-          })
-        end
-      end
+  local Protected = ParseTerms(JD.Get("Protect"))
+  ForEachBagItem(function(Bag, Slot, ItemLink)
+    local Name, _, Quality, _, _, _, _, _, _, _, SellPrice, ClassID = GetItemInfo(ItemLink)
+    if IsCandidate(Quality, SellPrice, ClassID) and not MatchesTerms(Name, Protected) then
+      local ItemCount = GetStackCount(Bag, Slot)
+      tinsert(JunkStacks, {
+        Link = ItemLink,
+        Name = Name,
+        Quality = Quality,
+        Bag = Bag,
+        Slot = Slot,
+        Count = ItemCount,
+        Value = SellPrice * ItemCount,
+        Order = #JunkStacks + 1, -- Scan order breaks ties; table.sort is not stable.
+      })
     end
-  end
+  end)
 
   local ByPrice = JD.Get("Order") == "price"
   table.sort(JunkStacks, function(A, B)
@@ -171,6 +207,42 @@ local function GetJunkStacks()
   end)
 
   return JunkStacks
+end
+
+-- Print which items in the bags a "never drop" filter matches, for the options window's Test
+-- button. Each match says whether the filter is actually keeping it from being dropped.
+local function TestFilter(Text)
+  local Terms = ParseTerms(Text)
+  if #Terms == 0 then
+    Say("Type one or more words, separated by commas, and then press Test.")
+    return
+  end
+
+  local Matches = {}
+  ForEachBagItem(function(Bag, Slot, ItemLink)
+    local Name, _, Quality, _, _, _, _, _, _, _, SellPrice, ClassID = GetItemInfo(ItemLink)
+    if MatchesTerms(Name, Terms) then
+      tinsert(Matches, {
+        Link = ItemLink,
+        Count = GetStackCount(Bag, Slot),
+        WouldDrop = IsCandidate(Quality, SellPrice, ClassID),
+      })
+    end
+  end)
+
+  if #Matches == 0 then
+    Say("'" .. table.concat(Terms, ", ") .. "' matches nothing in your bags right now.")
+    return
+  end
+  Say("'" .. table.concat(Terms, ", ") .. "' matches " .. #Matches .. " stack(s) in your bags:")
+  for Rank = 1, math.min(#Matches, 10) do
+    local Match = Matches[Rank]
+    local Note = Match.WouldDrop and "kept safe (it would otherwise be dropped)" or "not on the drop list anyway"
+    Say("  " .. Match.Link .. " x" .. Match.Count .. " - " .. Note)
+  end
+  if #Matches > 10 then
+    Say("  ...and " .. (#Matches - 10) .. " more")
+  end
 end
 
 -- Delete the given stacks. A slot is skipped if it no longer holds the item it held when the
@@ -201,6 +273,7 @@ StaticPopupDialogs["JUNKDROP_CONFIRM_RUN"] = {
 
 -- The LDB file is loaded after this one and shares these through the addon table.
 JD.GetJunkStacks = GetJunkStacks
+JD.TestFilter = TestFilter
 JD.FormatCoins = FormatCoins
 
 function JunkDrop(SlashArg)

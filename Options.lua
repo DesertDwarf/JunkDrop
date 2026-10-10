@@ -28,6 +28,8 @@ local function ApplySkinTo(S)
     S.Checkbox(Button)
   end
   S.Button(Frame.ResetButton)
+  S.Button(Frame.TestButton)
+  S.EditBox(Frame.FilterBox)
 end
 
 local function ApplySkin()
@@ -145,6 +147,42 @@ local function Build()
   Warning:SetJustifyH("LEFT")
   Warning:SetTextColor(1, .5, .5)
   Warning:SetText("Anything better than Poor is a real item. Items with no vendor price, and quest items, are never picked. Try /jd list first to see what would go.")
+  Y = Y - 40
+
+  AddHeader("Never drop", Y)
+  Y = Y - 22
+  local FilterBox = CreateFrame("EditBox", nil, Frame, "InputBoxTemplate")
+  FilterBox:SetSize(370, 22)
+  FilterBox:SetPoint("TOPLEFT", 22, Y)
+  FilterBox:SetAutoFocus(false)
+  FilterBox:SetMaxLetters(255)
+  FilterBox:SetScript("OnEnterPressed", FilterBox.ClearFocus)
+  FilterBox:SetScript("OnEscapePressed", FilterBox.ClearFocus)
+  FilterBox:SetScript("OnEditFocusLost", function(self)
+    JD.Set("Protect", self:GetText())
+  end)
+  tinsert(Syncs, function()
+    FilterBox:SetText(JD.Get("Protect"))
+  end)
+  Frame.FilterBox = FilterBox
+
+  local TestButton = CreateFrame("Button", nil, Frame, "UIPanelButtonTemplate")
+  TestButton:SetSize(80, 22)
+  TestButton:SetPoint("LEFT", FilterBox, "RIGHT", 10, 0)
+  TestButton:SetText("Test")
+  TestButton:SetScript("OnClick", function()
+    FilterBox:ClearFocus() -- Leaving the box saves what was typed.
+    JD.TestFilter(FilterBox:GetText())
+  end)
+  Frame.TestButton = TestButton
+  Y = Y - 28
+
+  local Hint = Frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  Hint:SetPoint("TOPLEFT", 16, Y)
+  Hint:SetWidth(488)
+  Hint:SetJustifyH("LEFT")
+  Hint:SetTextColor(.7, .7, .7)
+  Hint:SetText("Items whose name contains any of these words are never dropped, whatever their quality. Separate words with commas, for example: knife, fishing pole, bag. Test lists what matches in your bags now.")
   Y = Y - 40
 
   AddHeader("Bar and tooltip text", Y)
