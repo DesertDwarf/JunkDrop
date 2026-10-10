@@ -100,6 +100,7 @@ local function Build()
   Frame:SetSize(520, 340)
   Frame:SetPoint("CENTER")
   Frame:SetFrameStrata("DIALOG")
+  Frame:Hide() -- New frames start out visible; OpenOptions decides when to show this one.
   Frame:SetMovable(true)
   Frame:EnableMouse(true)
   Frame:SetClampedToScreen(true)
