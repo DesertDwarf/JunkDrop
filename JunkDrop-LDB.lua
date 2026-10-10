@@ -21,11 +21,27 @@ local function StackText(Stack)
 	return table.concat(Parts, " ")
 end
 
--- Join the label and the body, leaving out the separator when the label is hidden.
+-- One small dot per selected quality, in the quality's color. These are inline textures rather
+-- than colored text, so a display that strips color codes (EllesmereUI does by default) keeps them.
+local function QualityDots()
+	local Dots = ""
+	for Quality = 0, 4 do
+		if JD.Get("Include" .. Quality) then
+			Dots = Dots .. "|TInterface\\AddOns\\JunkDrop\\JunkDrop-Dot" .. Quality .. ":0|t"
+		end
+	end
+	return Dots
+end
+
+-- Put the label and the quality dots in front of the body. The dots show even when the label is hidden.
 local function WithLabel(Body)
 	local Label = Labels[JD.Get("Label")] or Labels.full
+	local Dots = JD.Get("Dots") and QualityDots() or ""
 	if Label == "" then
-		return Body
+		return Dots == "" and Body or (Dots .. " " .. Body)
+	end
+	if Dots ~= "" then
+		Label = Label .. " " .. Dots
 	end
 	return Label .. ": " .. Body
 end

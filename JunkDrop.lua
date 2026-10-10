@@ -27,6 +27,7 @@ local GetCoinTextureString = C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureStr
 JD.Defaults = {
   Label = "full", -- Text before the item on LDB displays: "full" (JunkDrop), "short" (JD) or "none".
   Show = "both", -- What LDB displays show: "both" (item name and value), "value" or "name".
+  Dots = true, -- Show a colored dot per selected item quality after the label on LDB displays.
   ShowCount = true, -- Append the stack size (x3) when a stack holds more than one item.
   Coins = "icons", -- Coin style: "icons" or "letters" (1g 2s 3c).
   TooltipRows = 5, -- Cheapest stacks listed in the LDB tooltip.

@@ -155,6 +155,8 @@ local function Build()
     { Value = "none", Text = "None" },
   }, Y)
   Y = Y - 30
+  AddToggle("Dots", "Show a colored dot for each quality that can be dropped", Y)
+  Y = Y - 30
   AddChoice("Show", "Show", {
     { Value = "both", Text = "Name and value" },
     { Value = "value", Text = "Value only" },
