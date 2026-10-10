@@ -16,21 +16,30 @@ end
 -- Hand the window to EllesmereUI so it follows the player's chosen theme. EllesmereUI calls
 -- the registered function at login, usually before the window exists, so ApplySkin also runs
 -- when the window is built.
+local function ApplySkinTo(S)
+  S.Shell(Frame)
+  if Frame.Inset then
+    S.Inset(Frame.Inset)
+  end
+  if Frame.CloseButton then
+    S.CloseButton(Frame.CloseButton)
+  end
+  for _, Button in ipairs(Frame.CheckButtons) do
+    S.Checkbox(Button)
+  end
+  S.Button(Frame.ResetButton)
+end
+
 local function ApplySkin()
   if not (Skin and Frame) then
     return
   end
-  Skin.Shell(Frame)
-  if Frame.Inset then
-    Skin.Inset(Frame.Inset)
+  -- EllesmereUI's skin functions are outside code. If one fails, report it through the normal
+  -- error handler but still let the window open, just unthemed.
+  local Ok, Err = pcall(ApplySkinTo, Skin)
+  if not Ok then
+    geterrorhandler()(Err)
   end
-  if Frame.CloseButton then
-    Skin.CloseButton(Frame.CloseButton)
-  end
-  for _, Button in ipairs(Frame.CheckButtons) do
-    Skin.Checkbox(Button)
-  end
-  Skin.Button(Frame.ResetButton)
 end
 
 if EllesmereUI and EllesmereUI.RegisterSkin then
