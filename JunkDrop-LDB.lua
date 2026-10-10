@@ -59,7 +59,7 @@ StaticPopupDialogs["JUNKDROP_CONFIRM"] = {
 }
 
 local broker = ldb:NewDataObject("JunkDrop-LDB", {
-	type = "launcher",
+	type = "data source", -- It shows live text, and some displays (ElvUI) only show the text of a data source by default.
 	text = "JunkDrop",
 	icon = "Interface\\AddOns\\JunkDrop\\JunkDrop-LDB-icon",
 	OnClick = function(_, msg)
