@@ -146,7 +146,7 @@ local function Build()
   Warning:SetWidth(488)
   Warning:SetJustifyH("LEFT")
   Warning:SetTextColor(1, .5, .5)
-  Warning:SetText("Anything better than Poor is a real item. Items with no vendor price, and quest items, are never picked. Try /jd list first to see what would go.")
+  Warning:SetText("Items with no vendor price, and quest items, are never picked. Try \"/jd list\" first to see what would go.")
   Y = Y - 40
 
   AddHeader("Never drop", Y)
