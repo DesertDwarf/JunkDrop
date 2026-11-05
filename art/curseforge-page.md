@@ -11,6 +11,10 @@ Not part of the addon package (`art` is in `.pkgmeta`'s ignore list). Paste thes
 
 Delete your lowest-value items with one command or click, so you can keep looting with full bags. Choose which qualities count, protect items by name, and see what's next on your bar and in your bags.
 
+## Logo
+
+`art/curseforge-icon-400.png`, exactly 400x400. Regenerate or tweak it with `art/make-logo.py` (needs Pillow).
+
 ## Categories
 
 - Main category: Bags & Inventory
