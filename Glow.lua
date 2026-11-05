@@ -6,10 +6,11 @@
 local _, JD = ... -- Addon name and the table shared between this addon's files.
 
 local GlowTexture = "Interface\\Buttons\\UI-ActionButton-Border"
-local GlowScale = 1.9 -- Glow size relative to the slot; the art has transparent padding.
-local GlowColor = { 1, .1, .1 }
+local GlowScale = 2.1 -- Outer glow size relative to the slot; the art has transparent padding.
+local BorderWidth = 2 -- Thickness of the solid red border, in pixels.
+local Red, Green, Blue = 1, .12, .08
 
-local Glows = setmetatable({}, { __mode = "k" }) -- Slot button -> its glow texture and pulse.
+local Glows = setmetatable({}, { __mode = "k" }) -- Slot button -> its glow frame and textures.
 local Target -- Bag and slot of the next stack to drop, or false when there is none.
 local TargetTime -- When Target was last worked out.
 local Painted -- The Target key the bags were last repainted for.
@@ -36,18 +37,49 @@ local function GetGlow(Button)
   if not Host then
     return nil
   end
-  local Texture = Host:CreateTexture(nil, "OVERLAY", nil, 7)
-  Texture:SetTexture(GlowTexture)
-  Texture:SetBlendMode("ADD")
-  Texture:SetVertexColor(GlowColor[1], GlowColor[2], GlowColor[3])
-  Texture:SetPoint("CENTER", Host, "CENTER")
-  local Pulse = Texture:CreateAnimationGroup()
+
+  -- Everything lives in one frame so a single animation can pulse all of it.
+  local Frame = CreateFrame("Frame", nil, Host)
+  Frame:SetAllPoints(Host)
+  Frame:SetFrameLevel(Host:GetFrameLevel() + 5)
+
+  -- Two stacked copies of the glow art: it is faint, and additive blending adds them together.
+  local Halos = {}
+  for Layer = 1, 2 do
+    local Halo = Frame:CreateTexture(nil, "OVERLAY", nil, 6 + Layer - 1)
+    Halo:SetTexture(GlowTexture)
+    Halo:SetBlendMode("ADD")
+    Halo:SetVertexColor(Red, Green, Blue)
+    Halo:SetPoint("CENTER", Frame, "CENTER")
+    Halos[Layer] = Halo
+  end
+
+  -- A solid border that stays clearly visible even when the glow is faint.
+  local Edges = {}
+  for Index, Corners in ipairs({
+    { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" },
+    { "TOPLEFT", "BOTTOMLEFT" }, { "TOPRIGHT", "BOTTOMRIGHT" },
+  }) do
+    local Edge = Frame:CreateTexture(nil, "OVERLAY", nil, 7)
+    Edge:SetColorTexture(Red, Green, Blue, 1)
+    Edge:SetPoint(Corners[1], Frame, Corners[1])
+    Edge:SetPoint(Corners[2], Frame, Corners[2])
+    if Index <= 2 then
+      Edge:SetHeight(BorderWidth)
+    else
+      Edge:SetWidth(BorderWidth)
+    end
+    Edges[Index] = Edge
+  end
+
+  local Pulse = Frame:CreateAnimationGroup()
   Pulse:SetLooping("BOUNCE")
   local Fade = Pulse:CreateAnimation("Alpha")
   Fade:SetFromAlpha(1)
-  Fade:SetToAlpha(.35)
-  Fade:SetDuration(.8)
-  Glow = { Host = Host, Texture = Texture, Pulse = Pulse }
+  Fade:SetToAlpha(.5)
+  Fade:SetDuration(.6)
+
+  Glow = { Host = Host, Frame = Frame, Halos = Halos, Edges = Edges, Pulse = Pulse }
   Glows[Button] = Glow
   return Glow
 end
@@ -56,7 +88,7 @@ local function HideGlow(Button)
   local Glow = Glows[Button]
   if Glow then
     Glow.Pulse:Stop()
-    Glow.Texture:Hide()
+    Glow.Frame:Hide()
   end
 end
 
@@ -69,9 +101,11 @@ local function Paint(Button, Data)
     if Glow then
       local Width, Height = Glow.Host:GetWidth(), Glow.Host:GetHeight()
       if Width and Width > 0 and Height and Height > 0 then
-        Glow.Texture:SetSize(Width * GlowScale, Height * GlowScale)
+        for _, Halo in ipairs(Glow.Halos) do
+          Halo:SetSize(Width * GlowScale, Height * GlowScale)
+        end
       end
-      Glow.Texture:Show()
+      Glow.Frame:Show()
       if not Glow.Pulse:IsPlaying() then
         Glow.Pulse:Play()
       end
