@@ -120,6 +120,9 @@ local function QueueRefresh()
 	C_Timer.After(0.3, function()
 		RefreshPending = false
 		JD.RefreshText()
+		if JD.RefreshGlow then
+			JD.RefreshGlow()
+		end
 	end)
 end
 

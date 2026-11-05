@@ -15,6 +15,7 @@ Updated for current World of Warcraft, with new features.
 - Choose which item qualities may be dropped: Poor (the default), Common, Uncommon, Rare and Epic. Drop order is either lowest quality first, or cheapest price first regardless of quality. Anything better than Poor asks for confirmation unless you turn that off.
 - The LDB item shows a small colored dot after its name for each quality that can be dropped (optional, and shown even when the name is hidden).
 - A "Never drop" filter: type words separated by commas (for example `knife, fishing pole, bag`) and any item whose name contains one is never dropped. A Test button lists what the words match in your bags right now.
+- With EllesmereUI Bags installed, the next stack to be dropped pulses with a red glow when your bags are open (optional).
 - Items better than Poor must have a vendor price and are never quest items, so things like the Hearthstone are never picked.
 - Fixed: the reagent bag is now scanned on retail.
 

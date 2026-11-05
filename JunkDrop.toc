@@ -17,7 +17,7 @@
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
 ## X-Category: Bags & Inventory
-## OptionalDeps: LibStub, CallbackHandler-1.0, EllesmereUI
+## OptionalDeps: LibStub, CallbackHandler-1.0, EllesmereUI, EllesmereUIBags
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua
@@ -28,4 +28,5 @@ libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 
 JunkDrop.lua
 Options.lua
+Glow.lua
 JunkDrop-LDB.lua

@@ -41,11 +41,15 @@ JD.Defaults = {
   Order = "quality", -- Drop order: "quality" (lowest quality first, then cheapest) or "price" (cheapest first).
   ConfirmHigher = true, -- Ask before deleting anything better than Poor.
   Protect = "", -- Comma-separated words; an item whose name contains one is never dropped.
+  Glow = true, -- Pulse a red glow around the next stack to drop when the bags are open.
 }
 
 local function SettingsChanged()
   if JD.RefreshText then
     JD.RefreshText()
+  end
+  if JD.RefreshGlow then
+    JD.RefreshGlow()
   end
 end
 

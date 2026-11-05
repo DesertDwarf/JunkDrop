@@ -223,6 +223,8 @@ local function Build()
   Y = Y - 30
   AddToggle("ReportDrops", "Print each deleted item in chat", Y)
   Y = Y - 30
+  AddToggle("Glow", "Glow the next item to drop when my bags are open (EllesmereUI Bags)", Y)
+  Y = Y - 30
 
   Frame:SetHeight(-Y + 40) -- Leaves room for the reset button.
 
