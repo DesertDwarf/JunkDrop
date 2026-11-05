@@ -1,12 +1,13 @@
 name: Package and release
 
-# Runs when a tag is pushed. Tags containing "alpha" or "beta" upload as that release type;
+# Runs when a tag starting with "v" is pushed, so a stray tag cannot publish. Tags containing
+# "alpha" or "beta" upload as that release type;
 # any other tag is a full release. Create annotated tags, for example:
 #   git tag -a v1.0.0-beta.1 -m "First beta" && git push origin v1.0.0-beta.1
 on:
   push:
     tags:
-      - '**'
+      - 'v*'
 
 # Needed so the packager can attach the zip to a GitHub release.
 permissions:

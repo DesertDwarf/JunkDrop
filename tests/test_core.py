@@ -1,0 +1,191 @@
+import unittest
+
+from harness import Env, default_bag, quality_dots
+
+
+class Fresh(unittest.TestCase):
+    def setUp(self):
+        self.env = Env()
+        self.env.bag(default_bag())
+        self.env.run("ResetState()")
+
+
+class Ranking(Fresh):
+    def test_only_poor_by_default(self):
+        self.assertEqual(self.env.order(), "Chipped Claw, Broken Boar Tusk")
+
+    def test_lowest_quality_first_then_cheapest(self):
+        self.env.set(Include1=True, Include2=True)
+        self.assertEqual(
+            self.env.order(),
+            "Chipped Claw, Broken Boar Tusk, Wooden Sword, Linen Cloth, Green Cloak",
+        )
+
+    def test_cheapest_price_first_ignores_quality(self):
+        self.env.set(Include1=True, Include2=True, Order="price")
+        self.assertEqual(
+            self.env.order(),
+            "Wooden Sword, Chipped Claw, Broken Boar Tusk, Green Cloak, Linen Cloth",
+        )
+
+    def test_a_quality_can_be_left_out(self):
+        self.env.set(Include0=False, Include1=True, Include2=True)
+        self.assertEqual(self.env.order(), "Wooden Sword, Linen Cloth, Green Cloak")
+
+    def test_unpriced_and_quest_items_are_never_picked(self):
+        self.env.set(Include1=True)
+        names = self.env.order()
+        self.assertNotIn("Hearthstone", names)
+        self.assertNotIn("Crate of Quest Stuff", names)
+
+    def test_a_stack_is_valued_as_a_whole(self):
+        self.env.bag([("Wolf Pelts", 0, 2, 6, 15), ("Spare Fang", 0, 10, 1, 15)])
+        self.assertEqual(self.env.order(), "Spare Fang, Wolf Pelts")  # 10c beats 6 x 2c = 12c
+
+
+class Commands(Fresh):
+    def test_list_shows_one_line_and_deletes_nothing(self):
+        out = self.env.cmd("list")
+        self.assertEqual(out, "JunkDrop: Next to drop: [Chipped Claw] x 1 @ 4c")
+        self.assertEqual(self.env.deleted(), "")
+
+    def test_list_count_and_all(self):
+        self.env.set(Include1=True)
+        self.assertIn("The next 3 stack(s) to drop:", self.env.cmd("list 3"))
+        self.assertIn("All 4 stack(s), in drop order:", self.env.cmd("list all"))
+
+    def test_debug_marks_what_would_be_dropped(self):
+        out = self.env.cmd("list debug")
+        self.assertIn("1. [Chipped Claw] x 1 @ 4c <-- would drop", out)
+        self.assertNotIn("<-- would drop", out.split("\n")[-1])
+
+    def test_unknown_option_deletes_nothing(self):
+        for text in ("dyr", "dry"):
+            self.assertIn("Unknown option '%s'" % text, self.env.cmd(text))
+        self.assertEqual(self.env.deleted(), "")
+
+    def test_bad_counts_are_refused(self):
+        self.assertIn("must be 1 or more", self.env.cmd("0"))
+        self.assertIn("cannot be combined", self.env.cmd("2 all"))
+        self.assertEqual(self.env.deleted(), "")
+
+    def test_help_lists_the_options(self):
+        out = self.env.cmd("help")
+        for word in ("list", "debug", "options", "help", "Never drop"):
+            self.assertIn(word, out)
+
+    def test_poor_items_are_deleted_without_asking(self):
+        self.env.cmd("2")
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
+        self.assertEqual(self.env.popup_count(), 0)
+
+    def test_deleting_is_reported_in_chat(self):
+        self.assertIn("Deleted [Chipped Claw] x 1 @ 4c", self.env.cmd(""))
+
+
+class Confirmation(Fresh):
+    def setUp(self):
+        super().setUp()
+        self.env.set(Include1=True)
+
+    def test_a_better_item_asks_first_and_lists_exactly_what_goes(self):
+        self.env.cmd("3")
+        self.assertEqual(self.env.ev("#Deleted"), 0)
+        self.assertEqual(self.env.popup_count(), 1)
+        text = self.env.ev("Popups[1].text")
+        self.assertEqual(text, "[Chipped Claw] x1\n[Broken Boar Tusk] x1\n[Wooden Sword] x1")
+
+    def test_accepting_deletes_exactly_those_stacks(self):
+        self.env.cmd("3")
+        self.env.accept_popup()
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk, Wooden Sword")
+
+    def test_a_slot_that_changed_while_asking_is_skipped(self):
+        self.env.cmd("3")
+        self.env.run('bag[5] = { "Something Else", 0, 1, 1, 15 }')  # the Wooden Sword's slot
+        self.env.accept_popup()
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
+
+    def test_confirmation_can_be_turned_off(self):
+        self.env.set(ConfirmHigher=False)
+        self.env.cmd("3")
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk, Wooden Sword")
+        self.assertEqual(self.env.popup_count(), 0)
+
+    def test_list_never_deletes_or_asks(self):
+        self.env.cmd("list 5")
+        self.assertEqual((self.env.ev("#Deleted"), self.env.popup_count()), (0, 0))
+
+
+class BarItem(Fresh):
+    def test_poor_target_with_confirm_click_asks_once(self):
+        self.env.set(ConfirmClick=True)
+        self.env.run('LDB.OnClick(nil, "LeftButton")')
+        self.assertEqual(self.env.ev("Popups[1].which"), "JUNKDROP_CONFIRM")
+        self.assertEqual(self.env.ev("#Deleted"), 0)
+
+    def test_better_target_gets_only_the_run_confirmation(self):
+        self.env.set(ConfirmClick=True, Include0=False, Include1=True)
+        self.env.run('LDB.OnClick(nil, "LeftButton")')
+        self.assertEqual(self.env.popup_count(), 1)
+        self.assertEqual(self.env.ev("Popups[1].which"), "JUNKDROP_CONFIRM_RUN")
+
+    def test_the_bar_item_is_a_data_source_with_live_text(self):
+        self.assertEqual(self.env.ev("LDB.type"), "data source")
+
+    def test_bar_text_and_dots(self):
+        dot0 = quality_dots(0)
+        self.assertEqual(self.env.bar_text(), "JunkDrop %s: Chipped Claw 4c" % dot0)
+        self.env.set(Label="short", Include2=True, Include4=True)
+        self.assertEqual(self.env.bar_text(), "JD %s: Chipped Claw 4c" % quality_dots(0, 2, 4))
+
+    def test_dots_can_be_turned_off(self):
+        self.env.set(Dots=False)
+        self.assertEqual(self.env.bar_text(), "JunkDrop: Chipped Claw 4c")
+
+    def test_dots_show_without_a_label(self):
+        self.env.set(Label="none", Include1=True)
+        self.assertEqual(self.env.bar_text(), "%s Chipped Claw 4c" % quality_dots(0, 1))
+        self.env.set(Dots=False)
+        self.assertEqual(self.env.bar_text(), "Chipped Claw 4c")
+
+    def test_value_only(self):
+        self.env.set(Show="value", Include3=True)
+        self.assertEqual(self.env.bar_text(), "JunkDrop %s: 4c" % quality_dots(0, 3))
+
+    def test_no_selected_qualities_leaves_no_stray_space(self):
+        self.env.set(Include0=False, Label="short")
+        self.assertEqual(self.env.bar_text(), "JD: no junk")
+        self.env.set(Label="none")
+        self.assertEqual(self.env.bar_text(), "no junk")
+
+    def test_letters_style_coins(self):
+        self.env.set(Coins="letters")
+        self.assertEqual(
+            self.env.ev("NS.FormatCoins(12345)"),
+            "1|cffffd700g|r 23|cffc7c7cfs|r 45|cffeda55fc|r",
+        )
+
+    def test_reset_restores_the_defaults(self):
+        self.env.set(Label="short", Include3=True)
+        self.env.run("NS.Reset()")
+        self.assertEqual(self.env.ev("NS.Get('Label')"), "full")
+        self.assertFalse(self.env.ev("NS.Get('Include3')"))
+
+
+class OptionsWindow(Fresh):
+    def test_first_open_shows_the_window_and_it_toggles(self):
+        # Real frames start visible; the window must start hidden or the first open hides it.
+        shown = []
+        for _ in range(3):
+            self.env.cmd("options")
+            shown.append(self.env.ev("OptionsWindow._shown == true"))
+        self.assertEqual(shown, [True, False, True])
+
+    def test_right_click_opens_it_too(self):
+        self.env.run('LDB.OnClick(nil, "RightButton")')
+        self.assertTrue(self.env.ev("OptionsWindow._shown == true"))
+
+
+if __name__ == "__main__":
+    unittest.main()

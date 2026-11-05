@@ -2,21 +2,20 @@
 
 ## v1.0.0
 
-Updated for current World of Warcraft, with new features.
+Updated for current World of Warcraft, with many new features.
 
-- Works on retail (12.1), Classic Era (1.15.9) and World of Warcraft: Forever (1.60.1).
-- `/jd <number>` deletes that many of the cheapest junk stacks, for example `/jd 3`.
-- `/jd list` shows the cheapest junk stack without deleting anything, so you can decide whether a new grey is worth looting. `/jd list <number>` and `/jd list all` show more.
-- `/jd debug` lists every junk stack, cheapest first, and marks the ones that are dropped.
-- `/jd help` describes every option. Unknown options are now refused instead of falling through to a delete.
-- Values are shown as gold, silver and copper.
-- The LDB item now shows the cheapest junk stack beside its name and lists the cheapest few stacks in its tooltip.
-- New settings window (`/jd options`, or right-click the LDB item): label, value-only display, stack size, coin style, tooltip rows, confirmation before deleting, and chat reports of deleted items. It follows your EllesmereUI theme when that addon is installed.
-- Choose which item qualities may be dropped: Poor (the default), Common, Uncommon, Rare and Epic. Drop order is either lowest quality first, or cheapest price first regardless of quality. Anything better than Poor asks for confirmation unless you turn that off.
-- The LDB item shows a small colored dot after its name for each quality that can be dropped (optional, and shown even when the name is hidden).
-- A "Never drop" filter: type words separated by commas (for example `knife, fishing pole, bag`) and any item whose name contains one is never dropped. A Test button lists what the words match in your bags right now.
-- With EllesmereUI Bags installed, the next stack to be dropped pulses with a red glow when your bags are open (optional).
-- Items better than Poor must have a vendor price and are never quest items, so things like the Hearthstone are never picked.
+- Works on retail (12.1), Classic Era (1.15) and World of Warcraft: Forever (1.60).
+- `/jd 3` deletes the next 3 stacks in line, for example. `/jd all` deletes everything that qualifies.
+- `/jd list` shows the next stack in line without deleting anything, so you can decide whether a new item is worth looting. `/jd list 3` and `/jd list all` show more.
+- `/jd debug` lists every stack in drop order and marks the ones that are dropped.
+- `/jd help` describes every option. An unknown option is now refused instead of falling through to a delete.
+- Item values are shown as gold, silver and copper icons.
+- Choose which item qualities can be dropped: Poor (the default), Common, Uncommon, Rare and Epic. Drop order is either lowest quality first, or cheapest price first regardless of quality.
+- Anything better than Poor needs a vendor price and is never a quest item, so things like the Hearthstone are never picked. A confirmation lists exactly what will be deleted, unless you turn it off.
+- A "Never drop" filter: type words separated by commas, such as `knife, fishing pole, bag`, and any item whose name contains one is never dropped. A Test button lists what the words match in your bags.
+- The bar item shows the next stack in line beside its name, with colored dots for the selected qualities, and lists the next few stacks in its tooltip. Left-click deletes the first stack listed; right-click opens settings.
+- A settings window (`/jd options`): label, value-only display, stack size, quality dots, coin style, tooltip rows, confirmations, and chat reports of deleted items. It follows your EllesmereUI theme when that addon is installed.
+- With EllesmereUI Bags installed, the next stack to be dropped pulses with a red glow while your bags are open (optional).
 - Fixed: the reagent bag is now scanned on retail.
 
 ## v0.8

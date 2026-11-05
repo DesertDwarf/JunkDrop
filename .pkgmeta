@@ -9,3 +9,5 @@ ignore:
   - .gitattributes
   - .gitignore
   - libs/LibStub/tests
+  - tools
+  - tests

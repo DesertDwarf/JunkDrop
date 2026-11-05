@@ -1,2 +1,4 @@
 .clairvoyance/
 library.md
+__pycache__/
+tools/deploy-targets.txt
