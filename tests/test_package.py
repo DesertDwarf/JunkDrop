@@ -40,6 +40,10 @@ class Toc(unittest.TestCase):
     def test_the_version_comes_from_the_release_tag(self):
         self.assertEqual(toc_header("Version"), "@project-version@")
 
+    def test_the_curseforge_project_id_is_set(self):
+        # The packager uploads to this project; a wrong or missing id publishes nowhere or elsewhere.
+        self.assertEqual(toc_header("X-Curse-Project-ID"), "24848")
+
     def test_the_saved_variable_matches_the_code(self):
         self.assertEqual(toc_header("SavedVariables"), "JunkDropDB")
 

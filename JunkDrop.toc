@@ -17,6 +17,7 @@
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
 ## X-Category: Bags & Inventory
+## X-Curse-Project-ID: 24848
 ## OptionalDeps: LibStub, CallbackHandler-1.0, EllesmereUI, EllesmereUIBags
 
 #@no-lib-strip@
