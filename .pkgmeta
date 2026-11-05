@@ -11,3 +11,4 @@ ignore:
   - libs/LibStub/tests
   - tools
   - tests
+  - art

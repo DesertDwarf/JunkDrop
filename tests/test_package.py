@@ -60,7 +60,7 @@ class Release(unittest.TestCase):
 
     def test_repo_only_folders_stay_out_of_the_package(self):
         pkgmeta = read(os.path.join(ROOT, ".pkgmeta"))
-        for folder in ("tools", "tests", ".github"):
+        for folder in ("tools", "tests", "art", ".github"):
             self.assertRegex(pkgmeta, r"(?m)^\s*-\s*%s\s*$" % re.escape(folder))
 
     def test_the_machine_specific_deploy_list_is_not_committed(self):
