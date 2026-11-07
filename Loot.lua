@@ -160,8 +160,8 @@ local Pad, LineHeight, ItemGap, LabelWidth = 14, 16, 8, 38 -- Pad clears the bor
 
 -- The look of Blizzard's own dialog windows, so the note sits comfortably beside the loot window.
 local Backdrop = {
-  bgFile = "Interface\DialogFrame\UI-DialogBox-Background",
-  edgeFile = "Interface\DialogFrame\UI-DialogBox-Border",
+  bgFile = "Interface/DialogFrame/UI-DialogBox-Background", -- Forward slashes need no escaping in Lua.
+  edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
   tile = true,
   tileSize = 32,
   edgeSize = 24,
@@ -260,11 +260,11 @@ local function BuildNote()
     tinsert(Note.Edges, Edge)
   end
 
-  -- With a backdrop the plain black fill and red edge above are not needed; they remain only for a
-  -- client that cannot draw one.
+  -- The dialog border replaces the red edge lines. The dark fill stays underneath it, so the text is
+  -- still readable if the border's art ever fails to draw; the lines are the whole look of a client
+  -- that cannot draw a backdrop at all.
   if Note.SetBackdrop then
     Note:SetBackdrop(Backdrop)
-    Note.Background:Hide()
     for _, Edge in ipairs(Note.Edges) do
       Edge:Hide()
     end

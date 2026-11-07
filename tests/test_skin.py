@@ -94,9 +94,13 @@ class WithoutEllesmere(unittest.TestCase):
         self.open_loot()
         self.assertTrue(self.env.ev("LootNote ~= nil and rawget(LootNote, '_shown') == true"))
         self.assertEqual(self.env.ev("LootNote._template"), "BackdropTemplate")  # modern clients need it
-        self.assertIn("UI-DialogBox-Border", self.env.ev("LootNote._backdrop.edgeFile"))
-        self.assertIn("UI-DialogBox-Background", self.env.ev("LootNote._backdrop.bgFile"))
-        self.assertTrue(self.env.ev("rawget(LootNote.Background, '_shown') == false"))  # not drawn twice
+        # The exact paths, not just a name inside them: a mangled path draws nothing at all.
+        self.assertEqual(self.env.ev("LootNote._backdrop.edgeFile"), "Interface/DialogFrame/UI-DialogBox-Border")
+        self.assertEqual(self.env.ev("LootNote._backdrop.bgFile"), "Interface/DialogFrame/UI-DialogBox-Background")
+        # The dark fill stays under the border, so the text is readable even if the art fails to draw.
+        self.assertTrue(self.env.ev("rawget(LootNote.Background, '_shown') ~= false"))
+        for index in range(1, 5):  # but the red edge lines are replaced by the border
+            self.assertTrue(self.env.ev("rawget(LootNote.Edges[%d], '_shown') == false" % index))
         self.assertEqual(self.env.ev("#Errors"), 0)
 
     def test_a_client_that_cannot_draw_a_backdrop_keeps_a_plain_look(self):

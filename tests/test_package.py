@@ -71,5 +71,26 @@ class Release(unittest.TestCase):
         self.assertIn("tools/deploy-targets.txt", read(os.path.join(ROOT, ".gitignore")))
 
 
+class LuaPaths(unittest.TestCase):
+    r"""In a Lua string a single backslash starts an escape, and "\D" is just "D". So the path
+    "Interface\DialogFrame\UI-DialogBox-Border" silently becomes "InterfaceDialogFrameUI-DialogBox-Border",
+    a texture that does not exist. Paths must use "/" or a doubled backslash."""
+
+    def sources(self):
+        for name in toc_lua_files():
+            yield name, read(os.path.join(ROOT, name))
+
+    def test_no_texture_path_has_lost_its_separators(self):
+        for name, source in self.sources():
+            self.assertIsNone(re.search(r'"\|?T?Interface[A-Za-z]', source), name)
+
+    def test_no_single_backslash_is_followed_by_a_letter_that_is_not_an_escape(self):
+        single_backslash_then_letter = re.compile(r"(?<!\\)\\(?![abfnrtvxz])[A-Za-z]")
+        for name, source in self.sources():
+            for number, line in enumerate(source.splitlines(), 1):
+                code = line.split("--")[0]  # a comment may mention a path
+                self.assertIsNone(single_backslash_then_letter.search(code), "%s:%d: %s" % (name, number, line.strip()))
+
+
 if __name__ == "__main__":
     unittest.main()
