@@ -60,8 +60,8 @@ With [EllesmereUI](https://www.curseforge.com/wow/addons/ellesmereui) Bags insta
 
 When the loot window is open and your bags are full, JunkDrop shows a small note beside it. For each item that won't fit it says whether the item is worth more than the next stack JunkDrop would drop:
 
-- **Take it and drop [item]**: the loot is worth more, so take it and drop that stack.
-- **Skip it**: the loot is worth no more than what you'd drop, so leave it.
+- **Drop** the item named first, then **Take** the loot below it: the loot is worth more than that stack, so swap them. It reads as a checklist, in the order to do it.
+- **Skip**: the loot is worth no more than what you'd drop, so leave it. The reason is underneath.
 - Quest items are always worth taking. Items with no vendor price are left to you. With several items, your best loot gets the first stacks to go.
 
 A button on the note drops the suggested stacks, asking first if any is better than Poor. An item that fits is never mentioned: a new item that joins a partly filled stack needs no free slot, and specialty bags (herbs, gems and so on) are only counted for the items they take. The note is JunkDrop's own window, so it works with any loot window, and you can turn it, or its button, off in Settings.

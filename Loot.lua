@@ -154,10 +154,9 @@ local function PlanLoot(Items, Bags, Room, Candidates)
   return Results
 end
 
--- The note: two lines for each item that doesn't fit. The first says what it is, the second what to
--- do about it.
+-- The note: two labeled lines for each item that doesn't fit.
 local Green, Red, Grey = "|cff40ff40", "|cffff4040", "|cffaaaaaa"
-local Pad, LineHeight, ItemGap = 10, 16, 8
+local Pad, LineHeight, ItemGap, LabelWidth = 10, 16, 8, 38
 
 local function WithIcon(Icon, Link, Quantity)
   local Text = "|T" .. (Icon or 134400) .. ":14|t " .. Link
@@ -167,7 +166,9 @@ local function WithIcon(Icon, Link, Quantity)
   return Text
 end
 
--- Returns the loot's line and the advice line for one planned item.
+-- Returns the labeled lines for one planned item as TopLabel, Top, BottomLabel, Bottom. A swap is a
+-- checklist in the order to do it: drop the bag item, then take the loot. Anything else is the loot
+-- with the reason underneath.
 local function Describe(Result)
   local Item, Stack = Result.Item, Result.Candidate
   local Loot = WithIcon(Item.Icon, Item.Link, Item.Quantity)
@@ -175,20 +176,18 @@ local function Describe(Result)
     Loot = Loot .. "  " .. JD.FormatCoins(Item.Value)
   end
 
-  local Advice
   if Result.Action == "swap" then
-    Advice = Green .. (Item.IsQuest and "Quest item: take it" or "Take it") .. "|r and drop "
-      .. WithIcon(Stack.Icon, Stack.Link, Stack.Count) .. "  " .. JD.FormatCoins(Stack.Value)
+    local Drop = WithIcon(Stack.Icon, Stack.Link, Stack.Count) .. "  " .. JD.FormatCoins(Stack.Value)
+    local Take = Item.IsQuest and (Loot .. "  " .. Grey .. "(quest item)|r") or Loot
+    return Red .. "Drop|r", Drop, Green .. "Take|r", Take
   elseif Result.Action == "skip" then
-    Advice = Red .. "Skip it|r  " .. Grey .. "not worth more than " .. Stack.Link .. " " .. JD.FormatCoins(Stack.Value) .. "|r"
+    return Red .. "Skip|r", Loot, "", Grey .. "not worth more than " .. Stack.Link .. " " .. JD.FormatCoins(Stack.Value) .. "|r"
   elseif Result.Action == "none" then
-    Advice = Red .. "No room, and nothing JunkDrop can drop|r"
+    return Red .. "Skip|r", Loot, "", Grey .. "No room, and nothing JunkDrop can drop|r"
   elseif Result.Action == "pending" then
-    Advice = Grey .. "Checking this item...|r"
-  else
-    Advice = Grey .. "No vendor price, your call|r"
+    return Grey .. "...|r", Loot, "", Grey .. "Checking this item...|r"
   end
-  return Loot, Advice
+  return Grey .. "Check|r", Loot, "", Grey .. "No vendor price, your call|r"
 end
 
 local Note -- Built the first time it is needed.
@@ -219,10 +218,10 @@ local function BuildNote()
   Note.Items = {}
   for Index = 1, MaxItems do
     local Slot = {}
-    for _, Line in ipairs({ "Top", "Bottom" }) do
-      Slot[Line] = Note:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-      Slot[Line]:SetJustifyH("LEFT")
-      Slot[Line]:SetWordWrap(false)
+    for _, Part in ipairs({ "TopLabel", "Top", "BottomLabel", "Bottom" }) do
+      Slot[Part] = Note:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+      Slot[Part]:SetJustifyH("LEFT")
+      Slot[Part]:SetWordWrap(false)
     end
     Note.Items[Index] = Slot
   end
@@ -249,11 +248,18 @@ local function Place()
   end
 end
 
--- Stretch a line across the note from the given indent and height.
-local function Put(Line, Indent, Y)
+-- A line of text, stretched from after the label column to the note's right edge.
+local function Put(Line, Y)
   Line:ClearAllPoints()
-  Line:SetPoint("TOPLEFT", Note, "TOPLEFT", Indent, -Y)
+  Line:SetPoint("TOPLEFT", Note, "TOPLEFT", Pad + LabelWidth + 4, -Y)
   Line:SetPoint("TOPRIGHT", Note, "TOPRIGHT", -Pad, -Y)
+end
+
+-- A short label in the column to the left of the text.
+local function PutLabel(Line, Y)
+  Line:ClearAllPoints()
+  Line:SetPoint("TOPLEFT", Note, "TOPLEFT", Pad, -Y)
+  Line:SetWidth(LabelWidth)
 end
 
 local function HideNote()
@@ -297,20 +303,27 @@ local function Update()
   local Y = Pad + LineHeight + 6
   for Index, Slot in ipairs(Note.Items) do
     if Index <= Shown then
-      local Loot, Advice = Describe(Results[Index])
-      Slot.Top:SetText(Loot)
-      Put(Slot.Top, Pad, Y)
-      Slot.Bottom:SetText(Advice)
-      Put(Slot.Bottom, Pad + 20, Y + LineHeight) -- Indented to sit under the item's name.
+      local TopLabel, Top, BottomLabel, Bottom = Describe(Results[Index])
+      Slot.TopLabel:SetText(TopLabel)
+      Slot.Top:SetText(Top)
+      Slot.BottomLabel:SetText(BottomLabel)
+      Slot.Bottom:SetText(Bottom)
+      PutLabel(Slot.TopLabel, Y)
+      Put(Slot.Top, Y)
+      PutLabel(Slot.BottomLabel, Y + LineHeight)
+      Put(Slot.Bottom, Y + LineHeight)
       Y = Y + 2 * LineHeight + ItemGap
     elseif Index == Shown + 1 and #Results > Shown then
+      Slot.TopLabel:SetText("")
       Slot.Top:SetText(Grey .. "...and " .. (#Results - Shown) .. " more|r")
-      Put(Slot.Top, Pad, Y)
+      Put(Slot.Top, Y)
+      Slot.BottomLabel:SetText("")
       Slot.Bottom:SetText("")
       Y = Y + LineHeight + ItemGap
     else
-      Slot.Top:SetText("")
-      Slot.Bottom:SetText("")
+      for _, Part in ipairs({ "TopLabel", "Top", "BottomLabel", "Bottom" }) do
+        Slot[Part]:SetText("")
+      end
     end
   end
 

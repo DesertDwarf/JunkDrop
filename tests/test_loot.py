@@ -45,9 +45,15 @@ class LootCase(unittest.TestCase):
     def shown(self):
         return self.env.ev("LootNote ~= nil and rawget(LootNote, '_shown') == true")
 
+    def parts(self, index=1):
+        """One item's slot in the note: ((top label, top text), (bottom label, bottom text))."""
+        def text(part):
+            return self.env.ev("LootNote.Items[%d].%s._text" % (index, part))
+        return (text("TopLabel"), text("Top")), (text("BottomLabel"), text("Bottom"))
+
     def row(self, index=1):
-        """What one item's slot in the note says: its two lines together."""
-        return self.env.ev("LootNote.Items[%d].Top._text .. ' ' .. LootNote.Items[%d].Bottom._text" % (index, index))
+        """Everything one item's slot says, as a single string."""
+        return " ".join(piece for pair in self.parts(index) for piece in pair)
 
     def line_heights(self):
         """How far down the note each text line sits, top to bottom (only lines that have text)."""
@@ -71,14 +77,21 @@ class WhenBagsAreFull(LootCase):
         self.open(thing("Silk Cloth", 30))
         self.assertEqual(self.plan(), "Silk Cloth:swap<Chipped Claw")
         self.assertTrue(self.shown())
-        self.assertIn("Take it|r and drop", self.row())
-        self.assertIn("[Silk Cloth]", self.row())
-        self.assertIn("[Chipped Claw]", self.row())
+        # A checklist in the order to do it: drop the bag item first, then take the loot below it.
+        (top_label, top), (bottom_label, bottom) = self.parts()
+        self.assertIn("Drop", top_label)
+        self.assertIn("[Chipped Claw]", top)
+        self.assertIn("Take", bottom_label)
+        self.assertIn("[Silk Cloth]", bottom)
 
     def test_cheaper_loot_is_to_be_skipped_and_offers_no_drop(self):
         self.open(thing("Frayed Rag", 2))
         self.assertEqual(self.plan(), "Frayed Rag:skip<Chipped Claw")
-        self.assertIn("Skip it", self.row())
+        (top_label, top), (_, bottom) = self.parts()
+        self.assertIn("Skip", top_label)
+        self.assertIn("[Frayed Rag]", top)
+        self.assertIn("not worth more than", bottom)
+        self.assertIn("[Chipped Claw]", bottom)
         self.assertFalse(self.button_shown())
 
     def test_loot_worth_the_same_is_skipped(self):
@@ -104,7 +117,9 @@ class WhenBagsAreFull(LootCase):
     def test_a_quest_item_is_always_worth_taking(self):
         self.open(dict(name="Strange Note", quality=1, price=0, quest=True))
         self.assertEqual(self.plan(), "Strange Note:swap<Chipped Claw")
-        self.assertIn("Quest item: take it", self.row())
+        (top_label, _), (bottom_label, bottom) = self.parts()
+        self.assertEqual((("Drop" in top_label), ("Take" in bottom_label)), (True, True))
+        self.assertIn("(quest item)", bottom)
 
     def test_an_item_with_no_price_is_left_to_the_player(self):
         self.open(thing("Odd Trinket", 0))
