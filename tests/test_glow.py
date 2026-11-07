@@ -16,7 +16,8 @@ class Glow(unittest.TestCase):
     def setUp(self):
         self.env = Env()
         self.env.bag(BAG)
-        self.env.run("ResetState(); BagsOpen = true; FireEvents()")  # fires PLAYER_LOGIN
+        self.env.run("ResetState(); BagsOpen = true")
+        self.env.fire("PLAYER_LOGIN")
         self.repaint()
 
     def repaint(self):

@@ -42,6 +42,8 @@ JD.Defaults = {
   ConfirmHigher = true, -- Ask before deleting anything better than Poor.
   Protect = "", -- Comma-separated words; an item whose name contains one is never dropped.
   Glow = true, -- Pulse a red glow around the next stack to drop when the bags are open.
+  LootNote = true, -- Beside the loot window, say whether to take each item that won't fit.
+  LootDrop = true, -- Put a button on that note that drops the stacks it suggests.
 }
 
 local function SettingsChanged()
@@ -50,6 +52,9 @@ local function SettingsChanged()
   end
   if JD.RefreshGlow then
     JD.RefreshGlow()
+  end
+  if JD.RefreshLoot then
+    JD.RefreshLoot()
   end
 end
 
@@ -180,12 +185,13 @@ local function GetJunkStacks()
   local JunkStacks = {}
   local Protected = ParseTerms(JD.Get("Protect"))
   ForEachBagItem(function(Bag, Slot, ItemLink)
-    local Name, _, Quality, _, _, _, _, _, _, _, SellPrice, ClassID = GetItemInfo(ItemLink)
+    local Name, _, Quality, _, _, _, _, _, _, Icon, SellPrice, ClassID = GetItemInfo(ItemLink)
     if IsCandidate(Quality, SellPrice, ClassID) and not MatchesTerms(Name, Protected) then
       local ItemCount = GetStackCount(Bag, Slot)
       tinsert(JunkStacks, {
         Link = ItemLink,
         Name = Name,
+        Icon = Icon,
         Quality = Quality,
         Bag = Bag,
         Slot = Slot,
@@ -275,10 +281,40 @@ StaticPopupDialogs["JUNKDROP_CONFIRM_RUN"] = {
   hideOnEscape = true,
 }
 
--- The LDB file is loaded after this one and shares these through the addon table.
+-- Delete the given stacks, asking first when any of them is better than Poor and the settings
+-- say to. Report says whether to print each deleted stack. Shared by the slash command and the
+-- loot note's button, so both follow the same safeguards.
+local function DropStacks(Targets, Report)
+  local HasBetterThanPoor = false
+  for _, Stack in ipairs(Targets) do
+    if Stack.Quality > 0 then
+      HasBetterThanPoor = true
+    end
+  end
+
+  if HasBetterThanPoor and JD.Get("ConfirmHigher") then
+    -- Show exactly what will go, and delete exactly that if the player agrees.
+    local Lines = {}
+    for Rank = 1, math.min(#Targets, 6) do
+      tinsert(Lines, Targets[Rank].Link .. " x" .. Targets[Rank].Count)
+    end
+    if #Targets > 6 then
+      tinsert(Lines, "...and " .. (#Targets - 6) .. " more")
+    end
+    StaticPopup_Show("JUNKDROP_CONFIRM_RUN", table.concat(Lines, "\n"), nil, Targets)
+  else
+    DeleteStacks(Targets, Report)
+  end
+end
+
+-- The other files are loaded after this one and share these through the addon table.
 JD.GetJunkStacks = GetJunkStacks
 JD.TestFilter = TestFilter
 JD.FormatCoins = FormatCoins
+JD.DropStacks = DropStacks
+JD.ForEachBagItem = ForEachBagItem
+JD.GetStackCount = GetStackCount
+JD.LastBag = LastBag
 
 function JunkDrop(SlashArg)
   local DebugOn = false
@@ -352,27 +388,10 @@ function JunkDrop(SlashArg)
 
   if not ListOnly then
     local Targets = {}
-    local HasBetterThanPoor = false
     for Rank = 1, DropTotal do
       tinsert(Targets, JunkStacks[Rank])
-      if JunkStacks[Rank].Quality > 0 then
-        HasBetterThanPoor = true
-      end
     end
-
-    if HasBetterThanPoor and JD.Get("ConfirmHigher") then
-      -- Show exactly what will go, and delete exactly that if the player agrees.
-      local Lines = {}
-      for Rank = 1, math.min(#Targets, 6) do
-        tinsert(Lines, Targets[Rank].Link .. " x" .. Targets[Rank].Count)
-      end
-      if #Targets > 6 then
-        tinsert(Lines, "...and " .. (#Targets - 6) .. " more")
-      end
-      StaticPopup_Show("JUNKDROP_CONFIRM_RUN", table.concat(Lines, "\n"), nil, Targets)
-    else
-      DeleteStacks(Targets, JD.Get("ReportDrops") and not DebugOn) -- Debug already lists what is dropped.
-    end
+    DropStacks(Targets, JD.Get("ReportDrops") and not DebugOn) -- Debug already lists what is dropped.
   end
 end
 

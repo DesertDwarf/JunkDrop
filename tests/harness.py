@@ -52,9 +52,24 @@ class Env:
         return self.lua.eval(code)
 
     def bag(self, items):
-        """Set the bag to a list of (name, quality, price, count, item class)."""
-        rows = ", ".join('{ "%s", %d, %d, %d, %d }' % item for item in items)
+        """Set the bag to a list of (name, quality, price, count, item class[, max stack, family]).
+        An emptied slot is ("", -1, 0, 0, 0)."""
+        rows = ", ".join('{ "%s", %s }' % (item[0], ", ".join(str(v) for v in item[1:])) for item in items)
         self.run("SetBag({ %s })" % rows)
+
+    def loot(self, items):
+        """Set the loot window to a list of dicts: name, quality, price, qty, class, max, family,
+        quest, slot (1 item, 2 money, 0 looted), uncached. Anything left out gets a default."""
+        def lua(value):
+            # bool is checked first because Python counts 1 as True and 0 as False.
+            if isinstance(value, bool):
+                return "true" if value else "false"
+            return '"%s"' % value if isinstance(value, str) else str(value)
+        rows = ", ".join("{ %s }" % ", ".join("%s = %s" % (k, lua(v)) for k, v in item.items()) for item in items)
+        self.run("SetLoot({ %s })" % rows)
+
+    def fire(self, event):
+        self.lua.eval("function(e) FireEvent(e) end")(event)
 
     def set(self, **settings):
         for key, value in settings.items():

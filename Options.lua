@@ -225,6 +225,10 @@ local function Build()
   Y = Y - 30
   AddToggle("Glow", "Glow the next item to drop when my bags are open (EllesmereUI Bags)", Y)
   Y = Y - 30
+  AddToggle("LootNote", "When my bags are full, advise on each loot item beside the loot window", Y)
+  Y = Y - 30
+  AddToggle("LootDrop", "Include a button on that note that drops the suggested items", Y)
+  Y = Y - 30
 
   Frame:SetHeight(-Y + 40) -- Leaves room for the reset button.
 

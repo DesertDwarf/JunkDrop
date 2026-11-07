@@ -30,4 +30,5 @@ libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 JunkDrop.lua
 Options.lua
 Glow.lua
+Loot.lua
 JunkDrop-LDB.lua

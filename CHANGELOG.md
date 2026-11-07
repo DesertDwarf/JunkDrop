@@ -16,6 +16,7 @@ Updated for current World of Warcraft, with many new features.
 - The bar item shows the next stack in line beside its name, with colored dots for the selected qualities, and lists the next few stacks in its tooltip. Left-click deletes the first stack listed; right-click opens settings.
 - A settings window (`/jd options`): label, value-only display, stack size, quality dots, coin style, tooltip rows, confirmations, and chat reports of deleted items. It follows your EllesmereUI theme when that addon is installed.
 - With EllesmereUI Bags installed, the next stack to be dropped pulses with a red glow while your bags are open (optional).
+- When your bags are full and the loot window is open, a note beside it says whether each item that won't fit is worth taking, and which of your items to drop for it. A button drops the suggested stacks, with the same confirmation as everything else (optional).
 - Fixed: the reagent bag is now scanned on retail.
 
 ## v0.8

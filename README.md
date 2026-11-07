@@ -56,13 +56,23 @@ JunkDrop adds an item to any bar that supports data-broker (LibDataBroker) plugi
 
 With [EllesmereUI](https://www.curseforge.com/wow/addons/ellesmereui) Bags installed, the next stack to be dropped pulses with a red glow while your bags are open. It's on by default and can be turned off in Settings. Other bag addons are not affected.
 
+## Advice at the loot window
+
+When the loot window is open and your bags are full, JunkDrop shows a small note beside it. For each item that won't fit it says whether the item is worth more than the next stack JunkDrop would drop:
+
+- **Take it. Drop [item]**: the loot is worth more, so take it and drop that stack.
+- **Skip it**: the loot is worth no more than what you'd drop, so leave it.
+- Quest items are always worth taking. Items with no vendor price are left to you. With several items, your best loot gets the first stacks to go.
+
+A button on the note drops the suggested stacks, asking first if any is better than Poor. An item that fits is never mentioned: a new item that joins a partly filled stack needs no free slot, and specialty bags (herbs, gems and so on) are only counted for the items they take. The note is JunkDrop's own window, so it works with any loot window, and you can turn it, or its button, off in Settings.
+
 ## Settings
 
 `/jd options` or right-click the bar item. It follows your EllesmereUI theme when that addon is installed.
 
 - What can be dropped, drop order, and the never-drop words.
 - Bar text: the label (`JunkDrop`, `JD` or none), name and value or value only, stack size, quality dots, coin icons or letters, and how many stacks the tooltip lists.
-- Behavior: confirm before deleting from the bar, always confirm for items better than Poor, print each deleted item in chat, and the bag glow.
+- Behavior: confirm before deleting from the bar, always confirm for items better than Poor, print each deleted item in chat, the bag glow, and the loot-window advice with its button.
 
 Settings are shared by every character on your account.
 

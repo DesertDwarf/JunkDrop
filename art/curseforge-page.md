@@ -64,6 +64,10 @@ JunkDrop adds an item to data-broker bars (EllesmereUI, ElvUI DataTexts, Titan P
 
 With EllesmereUI Bags installed, the next stack to be dropped pulses red while your bags are open. You can turn it off in settings.
 
+### At the loot window
+
+When the loot window is open and your bags are full, JunkDrop shows a note beside it. For each item that won't fit, it says whether the item is worth more than the next stack JunkDrop would drop ("Take it. Drop...") or not ("Skip it"). A button drops the suggested stacks, asking first for anything better than Poor. It works with any loot window.
+
 ### Settings
 
 `/jd options` or right-click the bar item. Label, value-only display, stack size, quality dots, coin style, tooltip rows, confirmations, chat reports, and the bag glow. It follows your EllesmereUI theme when that addon is installed.
