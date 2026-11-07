@@ -46,7 +46,16 @@ class LootCase(unittest.TestCase):
         return self.env.ev("LootNote ~= nil and rawget(LootNote, '_shown') == true")
 
     def row(self, index=1):
-        return self.env.ev("LootNote.Rows[%d]._text" % index)
+        """What one item's slot in the note says: its two lines together."""
+        return self.env.ev("LootNote.Items[%d].Top._text .. ' ' .. LootNote.Items[%d].Bottom._text" % (index, index))
+
+    def line_heights(self):
+        """How far down the note each text line sits, top to bottom (only lines that have text)."""
+        return [int(y) for y in self.env.ev(
+            "(function() local t = {} for _, s in ipairs(LootNote.Items) do"
+            " for _, line in ipairs({ s.Top, s.Bottom }) do"
+            "  if line._text ~= '' and rawget(line, '_points') then t[#t+1] = -line._points[1][5] end"
+            " end end return table.concat(t, ',') end)()").split(",")]
 
     def button_shown(self):
         return self.env.ev("rawget(LootNote.DropButton, '_shown') == true")
@@ -199,9 +208,28 @@ class TheNoteAndItsButton(LootCase):
         self.assertEqual(self.plan(), "Silk Cloth:swap<Chipped Claw")
         self.assertTrue(self.shown())
 
+    def test_lines_never_overlap_and_the_note_is_tall_enough_for_them_and_the_button(self):
+        self.open(thing("Silk Cloth", 50), thing("Wool Cloth", 20))
+        heights = self.line_heights()
+        self.assertEqual(len(heights), 4)  # two lines for each of two items
+        self.assertEqual(heights, sorted(heights))
+        for above, below in zip(heights, heights[1:]):
+            self.assertGreaterEqual(below - above, 16)  # a line is 16 tall
+        self.assertTrue(self.button_shown())
+        # The last line, then a gap and the button, then the padding, must all fit.
+        self.assertGreaterEqual(self.env.ev("LootNote._h"), heights[-1] + 16 + 8 + 22 + 10)
+
+    def test_the_note_is_as_wide_as_the_loot_window_but_not_narrower_than_it_can_read(self):
+        self.env.run("LootFrame = CreateFrame('Frame'); LootFrame:SetSize(400, 200)")
+        self.open(thing("Silk Cloth", 30))
+        self.assertEqual(self.env.ev("LootNote._w"), 400)
+        self.env.run("LootFrame:SetSize(200, 200)")
+        self.env.fire("LOOT_SLOT_CLEARED")
+        self.assertEqual(self.env.ev("LootNote._w"), 340)
+
     def test_more_items_than_rows_says_how_many_are_hidden(self):
         self.open(*[thing("Item %d" % n, 100 - n) for n in range(1, 9)])
-        self.assertIn("...and 4 more", self.row(5))
+        self.assertIn("...and 5 more", self.row(4))  # three items shown, five not
 
 
 if __name__ == "__main__":

@@ -74,6 +74,14 @@ Mock = { __index = function(_, key)
   if key == "SetTexture" then return function(self, path) self._path = path end end
   if key == "SetBlendMode" then return function(self, mode) self._blend = mode end end
   if key == "SetText" then return function(self, text) self._text = text end end
+  -- Where things are placed, as { point, relative frame, relative point, x, y } in call order.
+  if key == "SetPoint" then
+    return function(self, ...)
+      if not rawget(self, "_points") then self._points = {} end
+      tinsert(self._points, { ... })
+    end
+  end
+  if key == "ClearAllPoints" then return function(self) self._points = {} end end
   if key == "RegisterEvent" then
     return function(self, event)
       if not rawget(self, "_events") then

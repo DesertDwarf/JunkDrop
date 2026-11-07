@@ -13,8 +13,8 @@ local GetItemFamily = C_Item and C_Item.GetItemFamily or GetItemFamily
 
 local ItemSlotType = Enum and Enum.LootSlotType and Enum.LootSlotType.Item or LOOT_SLOT_ITEM or 1
 local QuestClassID = Enum and Enum.ItemClass and Enum.ItemClass.Questitem or 12
-local MaxRows = 5
-local NoteWidth = 380
+local MaxItems = 4 -- Items the note lists; more are summarized in a last line.
+local NoteWidth, MinWidth = 380, 340
 
 -- Items and bags carry a "family" bit mask for specialty bags (herbs, gems, and so on). A bag
 -- with family 0 takes anything; any other bag takes only items sharing a bit with it.
@@ -154,8 +154,10 @@ local function PlanLoot(Items, Bags, Room, Candidates)
   return Results
 end
 
--- The note: one line per item that doesn't fit.
+-- The note: two lines for each item that doesn't fit. The first says what it is, the second what to
+-- do about it.
 local Green, Red, Grey = "|cff40ff40", "|cffff4040", "|cffaaaaaa"
+local Pad, LineHeight, ItemGap = 10, 16, 8
 
 local function WithIcon(Icon, Link, Quantity)
   local Text = "|T" .. (Icon or 134400) .. ":14|t " .. Link
@@ -165,21 +167,28 @@ local function WithIcon(Icon, Link, Quantity)
   return Text
 end
 
+-- Returns the loot's line and the advice line for one planned item.
 local function Describe(Result)
   local Item, Stack = Result.Item, Result.Candidate
   local Loot = WithIcon(Item.Icon, Item.Link, Item.Quantity)
-  local Worth = Item.Value and (" " .. JD.FormatCoins(Item.Value)) or ""
-  if Result.Action == "swap" then
-    local Drop = WithIcon(Stack.Icon, Stack.Link, Stack.Count) .. " " .. JD.FormatCoins(Stack.Value)
-    return Loot .. Worth .. "  " .. Green .. (Item.IsQuest and "Quest item, take it. Drop" or "Take it. Drop") .. "|r " .. Drop
-  elseif Result.Action == "skip" then
-    return Loot .. Worth .. "  " .. Red .. "Skip it" .. "|r " .. Grey .. "(" .. Stack.Link .. " is worth " .. JD.FormatCoins(Stack.Value) .. ")|r"
-  elseif Result.Action == "none" then
-    return Loot .. Worth .. "  " .. Red .. "No room, and nothing JunkDrop can drop|r"
-  elseif Result.Action == "pending" then
-    return Loot .. "  " .. Grey .. "Checking this item...|r"
+  if Item.Value then
+    Loot = Loot .. "  " .. JD.FormatCoins(Item.Value)
   end
-  return Loot .. "  " .. Grey .. "No vendor price, your call|r"
+
+  local Advice
+  if Result.Action == "swap" then
+    Advice = Green .. (Item.IsQuest and "Quest item, take it. Drop" or "Take it. Drop") .. "|r "
+      .. WithIcon(Stack.Icon, Stack.Link, Stack.Count) .. "  " .. JD.FormatCoins(Stack.Value)
+  elseif Result.Action == "skip" then
+    Advice = Red .. "Skip it|r  " .. Grey .. "not worth more than " .. Stack.Link .. " " .. JD.FormatCoins(Stack.Value) .. "|r"
+  elseif Result.Action == "none" then
+    Advice = Red .. "No room, and nothing JunkDrop can drop|r"
+  elseif Result.Action == "pending" then
+    Advice = Grey .. "Checking this item...|r"
+  else
+    Advice = Grey .. "No vendor price, your call|r"
+  end
+  return Loot, Advice
 end
 
 local Note -- Built the first time it is needed.
@@ -188,12 +197,11 @@ local LootOpen = false
 local function BuildNote()
   Note = CreateFrame("Frame", "JunkDropLootNote", UIParent)
   Note:SetFrameStrata("HIGH")
-  Note:SetWidth(NoteWidth)
   Note:Hide() -- New frames start out visible.
 
   Note.Background = Note:CreateTexture(nil, "BACKGROUND")
   Note.Background:SetAllPoints(Note)
-  Note.Background:SetColorTexture(0, 0, 0, .8)
+  Note.Background:SetColorTexture(0, 0, 0, .85)
 
   -- A thin red edge, so the note reads as a warning and is easy to find beside the loot.
   for _, Corners in ipairs({
@@ -208,34 +216,44 @@ local function BuildNote()
   end
 
   Note.Header = Note:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  Note.Header:SetPoint("TOPLEFT", 8, -6)
-  Note.Rows = {}
-  for Index = 1, MaxRows do
-    local Row = Note:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    Row:SetPoint("TOPLEFT", 8, -6 - 16 - Index * 18)
-    Row:SetWidth(NoteWidth - 16)
-    Row:SetJustifyH("LEFT")
-    Row:SetWordWrap(false)
-    Note.Rows[Index] = Row
+  Note.Items = {}
+  for Index = 1, MaxItems do
+    local Slot = {}
+    for _, Line in ipairs({ "Top", "Bottom" }) do
+      Slot[Line] = Note:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+      Slot[Line]:SetJustifyH("LEFT")
+      Slot[Line]:SetWordWrap(false)
+    end
+    Note.Items[Index] = Slot
   end
 
   Note.DropButton = CreateFrame("Button", nil, Note, "UIPanelButtonTemplate")
-  Note.DropButton:SetSize(190, 22)
+  Note.DropButton:SetHeight(22)
   Note.DropButton:SetText("Drop the suggested items")
   Note.DropButton:SetScript("OnClick", function()
     JD.DropStacks(Note.Swaps, JD.Get("ReportDrops"))
   end)
 end
 
+-- Under the loot window, as wide as it is (but wide enough to read).
 local function Place()
   Note:ClearAllPoints()
   -- ElvUI replaces the loot window with its own; everyone else uses Blizzard's.
   local Target = _G.ElvLootFrame or _G.LootFrame
   if Target and Target:IsShown() then
-    Note:SetPoint("TOP", Target, "BOTTOM", 0, -6)
+    Note:SetWidth(math.max(Target:GetWidth() or 0, MinWidth))
+    Note:SetPoint("TOP", Target, "BOTTOM", 0, -4)
   else
+    Note:SetWidth(NoteWidth)
     Note:SetPoint("CENTER", UIParent, "CENTER", 0, -160)
   end
+end
+
+-- Stretch a line across the note from the given indent and height.
+local function Put(Line, Indent, Y)
+  Line:ClearAllPoints()
+  Line:SetPoint("TOPLEFT", Note, "TOPLEFT", Indent, -Y)
+  Line:SetPoint("TOPRIGHT", Note, "TOPRIGHT", -Pad, -Y)
 end
 
 local function HideNote()
@@ -269,27 +287,41 @@ local function Update()
       tinsert(Note.Swaps, Result.Candidate)
     end
   end
+
+  Note.Header:ClearAllPoints()
+  Note.Header:SetPoint("TOPLEFT", Note, "TOPLEFT", Pad, -Pad)
   Note.Header:SetText(Red .. "Bags full|r  " .. Grey .. "JunkDrop's advice for this loot|r")
 
-  -- With more items than rows, the last row says how many are not shown.
-  local Shown = #Results > MaxRows and MaxRows - 1 or #Results
-  for Index, Row in ipairs(Note.Rows) do
+  -- With more items than slots, the last slot says how many are not shown.
+  local Shown = #Results > MaxItems and MaxItems - 1 or #Results
+  local Y = Pad + LineHeight + 6
+  for Index, Slot in ipairs(Note.Items) do
     if Index <= Shown then
-      Row:SetText(Describe(Results[Index]))
+      local Loot, Advice = Describe(Results[Index])
+      Slot.Top:SetText(Loot)
+      Put(Slot.Top, Pad, Y)
+      Slot.Bottom:SetText(Advice)
+      Put(Slot.Bottom, Pad + 20, Y + LineHeight) -- Indented to sit under the item's name.
+      Y = Y + 2 * LineHeight + ItemGap
     elseif Index == Shown + 1 and #Results > Shown then
-      Row:SetText(Grey .. "...and " .. (#Results - Shown) .. " more|r")
+      Slot.Top:SetText(Grey .. "...and " .. (#Results - Shown) .. " more|r")
+      Put(Slot.Top, Pad, Y)
+      Slot.Bottom:SetText("")
+      Y = Y + LineHeight + ItemGap
     else
-      Row:SetText("")
+      Slot.Top:SetText("")
+      Slot.Bottom:SetText("")
     end
   end
 
-  local Height = 6 + 16 + math.min(#Results, MaxRows) * 18 + 8
+  local Height = Y - ItemGap + Pad
   local Button = Note.DropButton
   Button:ClearAllPoints()
   if JD.Get("LootDrop") and #Note.Swaps > 0 then
-    Button:SetPoint("TOPLEFT", 8, -Height)
+    Button:SetPoint("BOTTOMLEFT", Note, "BOTTOMLEFT", Pad, Pad)
+    Button:SetPoint("BOTTOMRIGHT", Note, "BOTTOMRIGHT", -Pad, Pad)
     Button:Show()
-    Height = Height + 28
+    Height = Height + 8 + 22
   else
     Button:Hide()
   end
