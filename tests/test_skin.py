@@ -60,6 +60,17 @@ class LootNote(Themed):
         for index in range(1, 5):
             self.assertTrue(self.hidden("LootNote.Edges[%d]" % index))
 
+    def test_the_dialog_border_is_removed_so_the_theme_is_not_drawn_over_it(self):
+        self.env.apply_skin()
+        self.open_loot()
+        self.assertTrue(self.env.ev("rawget(LootNote, '_backdrop') == false"))
+
+    def test_the_dialog_border_is_removed_when_the_skin_arrives_later_too(self):
+        self.open_loot()
+        self.assertTrue(self.env.ev("type(LootNote._backdrop) == 'table'"))
+        self.env.apply_skin()
+        self.assertTrue(self.env.ev("rawget(LootNote, '_backdrop') == false"))
+
     def test_a_theme_that_fails_is_reported_and_the_note_still_works(self):
         self.env.apply_skin(fail_on="Panel")
         self.open_loot()
@@ -74,12 +85,29 @@ class WithoutEllesmere(unittest.TestCase):
         self.env.run("ResetState()")
         self.env.bag(FULL)
 
-    def test_the_note_keeps_its_own_look(self):
-        self.env.loot([dict(name="Silk Cloth", quality=1, price=30)])
-        self.env.fire("LOOT_OPENED")
+    def open_loot(self, env=None):
+        env = env or self.env
+        env.loot([dict(name="Silk Cloth", quality=1, price=30)])
+        env.fire("LOOT_OPENED")
+
+    def test_the_note_looks_like_one_of_blizzards_dialog_windows(self):
+        self.open_loot()
         self.assertTrue(self.env.ev("LootNote ~= nil and rawget(LootNote, '_shown') == true"))
-        self.assertEqual(self.env.ev("rawget(LootNote.Background, '_shown') == false"), False)
+        self.assertEqual(self.env.ev("LootNote._template"), "BackdropTemplate")  # modern clients need it
+        self.assertIn("UI-DialogBox-Border", self.env.ev("LootNote._backdrop.edgeFile"))
+        self.assertIn("UI-DialogBox-Background", self.env.ev("LootNote._backdrop.bgFile"))
+        self.assertTrue(self.env.ev("rawget(LootNote.Background, '_shown') == false"))  # not drawn twice
         self.assertEqual(self.env.ev("#Errors"), 0)
+
+    def test_a_client_that_cannot_draw_a_backdrop_keeps_a_plain_look(self):
+        env = Env(setup="NoBackdrop = true")
+        env.run("ResetState()")
+        env.bag(FULL)
+        self.open_loot(env)
+        self.assertTrue(env.ev("LootNote ~= nil and rawget(LootNote, '_shown') == true"))
+        self.assertTrue(env.ev("rawget(LootNote.Background, '_shown') == true"))
+        for index in range(1, 5):
+            self.assertTrue(env.ev("rawget(LootNote.Edges[%d], '_shown') == true" % index))
 
     def test_nothing_registers_and_there_is_no_skin(self):
         self.assertEqual(self.env.ev("#Registrations"), 0)

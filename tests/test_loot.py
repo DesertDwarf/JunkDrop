@@ -232,7 +232,7 @@ class TheNoteAndItsButton(LootCase):
             self.assertGreaterEqual(below - above, 16)  # a line is 16 tall
         self.assertTrue(self.button_shown())
         # The last line, then a gap and the button, then the padding, must all fit.
-        self.assertGreaterEqual(self.env.ev("LootNote._h"), heights[-1] + 16 + 8 + 22 + 10)
+        self.assertGreaterEqual(self.env.ev("LootNote._h"), heights[-1] + 16 + 8 + 22 + 14)
 
     def test_the_note_is_as_wide_as_the_loot_window_but_not_narrower_than_it_can_read(self):
         self.env.run("LootFrame = CreateFrame('Frame'); LootFrame:SetSize(400, 200)")

@@ -156,7 +156,17 @@ end
 
 -- The note: two labeled lines for each item that doesn't fit.
 local Green, Red, Grey = "|cff40ff40", "|cffff4040", "|cffaaaaaa"
-local Pad, LineHeight, ItemGap, LabelWidth = 10, 16, 8, 38
+local Pad, LineHeight, ItemGap, LabelWidth = 14, 16, 8, 38 -- Pad clears the border drawn around the note.
+
+-- The look of Blizzard's own dialog windows, so the note sits comfortably beside the loot window.
+local Backdrop = {
+  bgFile = "Interface\DialogFrame\UI-DialogBox-Background",
+  edgeFile = "Interface\DialogFrame\UI-DialogBox-Border",
+  tile = true,
+  tileSize = 32,
+  edgeSize = 24,
+  insets = { left = 6, right = 6, top = 6, bottom = 6 },
+}
 
 local function WithIcon(Icon, Link, Quantity)
   local Text = "|T" .. (Icon or 134400) .. ":14|t " .. Link
@@ -198,6 +208,9 @@ local LootOpen = false
 -- red and green words keep their meaning. EllesmereUI's code is outside ours, so a failure in it
 -- is reported but never stops the note from working.
 local function SkinNote(S)
+  if Note.SetBackdrop then
+    Note:SetBackdrop(nil) -- The theme draws its own panel, so the dialog border would double up.
+  end
   S.Panel(Note)
   Note.Background:Hide()
   for _, Edge in ipairs(Note.Edges) do
@@ -224,7 +237,8 @@ end
 JD.OnSkin(JD.ApplyLootSkin)
 
 local function BuildNote()
-  Note = CreateFrame("Frame", "JunkDropLootNote", UIParent)
+  -- Modern clients draw a frame's backdrop only if it is made from the BackdropTemplate.
+  Note = CreateFrame("Frame", "JunkDropLootNote", UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
   Note:SetFrameStrata("HIGH")
   Note:Hide() -- New frames start out visible.
 
@@ -244,6 +258,16 @@ local function BuildNote()
     Edge:SetPoint(Corners[2], Note, Corners[2])
     Edge["Set" .. Corners[3]](Edge, 1)
     tinsert(Note.Edges, Edge)
+  end
+
+  -- With a backdrop the plain black fill and red edge above are not needed; they remain only for a
+  -- client that cannot draw one.
+  if Note.SetBackdrop then
+    Note:SetBackdrop(Backdrop)
+    Note.Background:Hide()
+    for _, Edge in ipairs(Note.Edges) do
+      Edge:Hide()
+    end
   end
 
   Note.Header = Note:CreateFontString(nil, "OVERLAY", "GameFontNormal")

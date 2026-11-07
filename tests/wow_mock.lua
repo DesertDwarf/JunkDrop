@@ -74,6 +74,10 @@ Mock = { __index = function(_, key)
   if key == "SetTexture" then return function(self, path) self._path = path end end
   if key == "SetBlendMode" then return function(self, mode) self._blend = mode end end
   if key == "SetText" then return function(self, text) self._text = text end end
+  if key == "SetBackdrop" then
+    if NoBackdrop then return nil end -- a client that cannot draw one
+    return function(self, backdrop) self._backdrop = backdrop or false end
+  end
   -- Where things are placed, as { point, relative frame, relative point, x, y } in call order.
   if key == "SetPoint" then
     return function(self, ...)
@@ -118,9 +122,10 @@ Mock = { __index = function(_, key)
 end }
 
 -- Like the real client, a new frame is visible until it is hidden.
-function CreateFrame(_, name, parent)
+BackdropTemplateMixin = {} -- Modern clients have this; a test can remove it.
+function CreateFrame(_, name, parent, template)
   local frame = new()
-  frame._shown, frame._parent = true, parent
+  frame._shown, frame._parent, frame._template = true, parent, template
   if parent then tinsert(ChildFrames, frame) end
   if name == "JunkDropOptionsFrame" then OptionsWindow = frame end
   if name == "JunkDropLootNote" then LootNote = frame end
