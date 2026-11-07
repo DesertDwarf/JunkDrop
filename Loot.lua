@@ -193,6 +193,36 @@ end
 local Note -- Built the first time it is needed.
 local LootOpen = false
 
+-- With EllesmereUI, the player's theme paints the note: its panel and border replace our plain
+-- black background and red edge, its button style goes on ours, and its font on every line. The
+-- red and green words keep their meaning. EllesmereUI's code is outside ours, so a failure in it
+-- is reported but never stops the note from working.
+local function SkinNote(S)
+  S.Panel(Note)
+  Note.Background:Hide()
+  for _, Edge in ipairs(Note.Edges) do
+    Edge:Hide()
+  end
+  S.Button(Note.DropButton)
+  S.Font(Note.Header)
+  for _, Slot in ipairs(Note.Items) do
+    for _, Part in ipairs({ "TopLabel", "Top", "BottomLabel", "Bottom" }) do
+      S.Font(Slot[Part])
+    end
+  end
+end
+
+function JD.ApplyLootSkin(S)
+  if Note then
+    local Ok, Err = pcall(SkinNote, S)
+    if not Ok then
+      geterrorhandler()(Err)
+    end
+  end
+end
+
+JD.OnSkin(JD.ApplyLootSkin)
+
 local function BuildNote()
   Note = CreateFrame("Frame", "JunkDropLootNote", UIParent)
   Note:SetFrameStrata("HIGH")
@@ -201,6 +231,7 @@ local function BuildNote()
   Note.Background = Note:CreateTexture(nil, "BACKGROUND")
   Note.Background:SetAllPoints(Note)
   Note.Background:SetColorTexture(0, 0, 0, .85)
+  Note.Edges = {}
 
   -- A thin red edge, so the note reads as a warning and is easy to find beside the loot.
   for _, Corners in ipairs({
@@ -212,6 +243,7 @@ local function BuildNote()
     Edge:SetPoint(Corners[1], Note, Corners[1])
     Edge:SetPoint(Corners[2], Note, Corners[2])
     Edge["Set" .. Corners[3]](Edge, 1)
+    tinsert(Note.Edges, Edge)
   end
 
   Note.Header = Note:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -232,6 +264,10 @@ local function BuildNote()
   Note.DropButton:SetScript("OnClick", function()
     JD.DropStacks(Note.Swaps, JD.Get("ReportDrops"))
   end)
+
+  if JD.Skin then
+    JD.ApplyLootSkin(JD.Skin)
+  end
 end
 
 -- Under the loot window, as wide as it is (but wide enough to read).

@@ -34,9 +34,13 @@ def quality_dots(*qualities):
 class Env:
     """One fresh addon instance. Lua values come back as plain Python values where they can."""
 
-    def __init__(self):
+    def __init__(self, ellesmere=False):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute(read(os.path.join(HERE, "wow_mock.lua")))
+        if ellesmere:  # EllesmereUI loads first, so it exists when our files register their skin
+            self.lua.execute(
+                "EllesmereUI = { RegisterSkin = function(name, fn) tinsert(Registrations, { name = name, fn = fn }) end }"
+            )
         load = self.lua.eval("LoadFile")
         for name in toc_lua_files():
             source = read(os.path.join(ROOT, name))
@@ -89,6 +93,10 @@ class Env:
 
     def deleted(self):
         return self.ev("table.concat(Deleted, ', ')")
+
+    def apply_skin(self, fail_on=None):
+        """Have EllesmereUI run our registered skin function, as it does at login."""
+        self.lua.eval("function(f) ApplySkin(f) end")(fail_on)
 
     def next_frame(self):
         self.run("Now = Now + 1")

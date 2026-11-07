@@ -213,6 +213,37 @@ EUI_Bags = {
   end,
 }
 
+-- Errors reported through the client's error handler.
+Errors = {}
+function geterrorhandler() return function(message) tinsert(Errors, message) end end
+
+-- EllesmereUI's skinning hook, when a test asks for it: RegisterSkin records the registration, and
+-- ApplySkin(failOn) then runs it with a skin object that records every call. The skin can be made
+-- to throw on one call, as outside code might.
+Registrations, SkinCalls = {}, {}
+function MakeSkin(failOn)
+  return setmetatable({}, { __index = function(_, name)
+    return function(...)
+      if name == failOn then error("simulated EllesmereUI failure in " .. name) end
+      tinsert(SkinCalls, { name = name, args = { ... } })
+    end
+  end })
+end
+function ApplySkin(failOn)
+  for _, registration in ipairs(Registrations) do registration.fn(MakeSkin(failOn)) end
+end
+function SkinHas(name, target)
+  for _, call in ipairs(SkinCalls) do
+    if call.name == name and call.args[1] == target then return true end
+  end
+  return false
+end
+function SkinCount(name)
+  local count = 0
+  for _, call in ipairs(SkinCalls) do if call.name == name then count = count + 1 end end
+  return count
+end
+
 -- Loading and test helpers.
 NS = {} -- The table the addon files share (the second value WoW passes to each file).
 function LoadFile(name, source) assert(loadstring(source, name))("JunkDrop", NS) end
@@ -224,7 +255,7 @@ function FireEvent(event, ...)
 end
 function ResetState()
   JunkDropDB = nil
-  Deleted, Popups, Chat, Loot, BagFamilies = {}, {}, {}, {}, {}
+  Deleted, Popups, Chat, Loot, BagFamilies, Errors = {}, {}, {}, {}, {}, {}
   Refreshes, InCombat, BagsOpen = 0, false, false
   Now = Now + 1
 end

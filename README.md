@@ -64,7 +64,7 @@ When the loot window is open and your bags are full, JunkDrop shows a small note
 - **Skip**: the loot is worth no more than what you'd drop, so leave it. The reason is underneath.
 - Quest items are always worth taking. Items with no vendor price are left to you. With several items, your best loot gets the first stacks to go.
 
-A button on the note drops the suggested stacks, asking first if any is better than Poor. An item that fits is never mentioned: a new item that joins a partly filled stack needs no free slot, and specialty bags (herbs, gems and so on) are only counted for the items they take. The note is JunkDrop's own window, so it works with any loot window, and you can turn it, or its button, off in Settings.
+A button on the note drops the suggested stacks, asking first if any is better than Poor. An item that fits is never mentioned: a new item that joins a partly filled stack needs no free slot, and specialty bags (herbs, gems and so on) are only counted for the items they take. The note is JunkDrop's own window, so it works with any loot window, and it follows your EllesmereUI theme when that addon is installed. You can turn it, or its button, off in Settings.
 
 ## Settings
 

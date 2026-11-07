@@ -94,6 +94,28 @@ local function FormatCoins(Amount)
   return Text .. (Amount % 100) .. "|cffeda55fc|r"
 end
 
+-- EllesmereUI themes other addons' windows through its skinning hook, which accepts only one
+-- registration per addon name. So there is one registration here, and each window of ours asks to
+-- be told when the skin is ready: JD.OnSkin(Fn) calls Fn(S) now if it already is, and whenever it
+-- becomes ready. Without EllesmereUI (or with skinning turned off) nothing is ever called.
+local SkinCallbacks = {}
+
+function JD.OnSkin(Fn)
+  tinsert(SkinCallbacks, Fn)
+  if JD.Skin then
+    Fn(JD.Skin)
+  end
+end
+
+if EllesmereUI and EllesmereUI.RegisterSkin then
+  EllesmereUI.RegisterSkin("JunkDrop", function(S)
+    JD.Skin = S
+    for _, Fn in ipairs(SkinCallbacks) do
+      Fn(S)
+    end
+  end)
+end
+
 -- Retail added a reagent bag after the four regular bags; older clients stop at NUM_BAG_SLOTS.
 local LastBag = Enum and Enum.BagIndex and Enum.BagIndex.ReagentBag or NUM_BAG_SLOTS
 

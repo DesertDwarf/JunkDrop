@@ -44,12 +44,10 @@ local function ApplySkin()
   end
 end
 
-if EllesmereUI and EllesmereUI.RegisterSkin then
-  EllesmereUI.RegisterSkin("JunkDrop", function(S)
-    Skin = S
-    ApplySkin()
-  end)
-end
+JD.OnSkin(function(S)
+  Skin = S
+  ApplySkin()
+end)
 
 local function AddHeader(Text, Y)
   local Header = Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
