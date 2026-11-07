@@ -66,7 +66,7 @@ With EllesmereUI Bags installed, the next stack to be dropped pulses red while y
 
 ### At the loot window
 
-When the loot window is open and your bags are full, JunkDrop shows a note beside it. For each item that won't fit, it says whether the item is worth more than the next stack JunkDrop would drop ("Take it. Drop...") or not ("Skip it"). A button drops the suggested stacks, asking first for anything better than Poor. It works with any loot window.
+When the loot window is open and your bags are full, JunkDrop shows a note beside it. For each item that won't fit, it says whether the item is worth more than the next stack JunkDrop would drop ("Take it and drop...") or not ("Skip it"). A button drops the suggested stacks, asking first for anything better than Poor. It works with any loot window.
 
 ### Settings
 

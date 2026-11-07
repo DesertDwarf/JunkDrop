@@ -71,7 +71,7 @@ class WhenBagsAreFull(LootCase):
         self.open(thing("Silk Cloth", 30))
         self.assertEqual(self.plan(), "Silk Cloth:swap<Chipped Claw")
         self.assertTrue(self.shown())
-        self.assertIn("Take it. Drop", self.row())
+        self.assertIn("Take it|r and drop", self.row())
         self.assertIn("[Silk Cloth]", self.row())
         self.assertIn("[Chipped Claw]", self.row())
 
@@ -104,7 +104,7 @@ class WhenBagsAreFull(LootCase):
     def test_a_quest_item_is_always_worth_taking(self):
         self.open(dict(name="Strange Note", quality=1, price=0, quest=True))
         self.assertEqual(self.plan(), "Strange Note:swap<Chipped Claw")
-        self.assertIn("Quest item, take it", self.row())
+        self.assertIn("Quest item: take it", self.row())
 
     def test_an_item_with_no_price_is_left_to_the_player(self):
         self.open(thing("Odd Trinket", 0))

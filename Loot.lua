@@ -177,7 +177,7 @@ local function Describe(Result)
 
   local Advice
   if Result.Action == "swap" then
-    Advice = Green .. (Item.IsQuest and "Quest item, take it. Drop" or "Take it. Drop") .. "|r "
+    Advice = Green .. (Item.IsQuest and "Quest item: take it" or "Take it") .. "|r and drop "
       .. WithIcon(Stack.Icon, Stack.Link, Stack.Count) .. "  " .. JD.FormatCoins(Stack.Value)
   elseif Result.Action == "skip" then
     Advice = Red .. "Skip it|r  " .. Grey .. "not worth more than " .. Stack.Link .. " " .. JD.FormatCoins(Stack.Value) .. "|r"
