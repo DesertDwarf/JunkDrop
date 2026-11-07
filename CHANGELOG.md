@@ -11,7 +11,7 @@ Updated for current World of Warcraft, with many new features.
 - `/jd help` describes every option. An unknown option is now refused instead of falling through to a delete.
 - Item values are shown as gold, silver and copper icons.
 - Choose which item qualities can be dropped: Poor (the default), Common, Uncommon, Rare and Epic. Drop order is either lowest quality first, or cheapest price first regardless of quality.
-- Anything better than Poor needs a vendor price and is never a quest item, so things like the Hearthstone are never picked. A confirmation lists exactly what will be deleted, unless you turn it off.
+- Quest items (items you need for a quest, or that start one) are never dropped, at any quality. Anything better than Poor also needs a vendor price, so things like the Hearthstone are never picked. A confirmation lists exactly what will be deleted, unless you turn it off.
 - A "Never drop" filter: type words separated by commas, such as `knife, fishing pole, bag`, and any item whose name contains one is never dropped. A Test button lists what the words match in your bags.
 - The bar item shows the next stack in line beside its name, with colored dots for the selected qualities, and lists the next few stacks in its tooltip. Left-click deletes the first stack listed; right-click opens settings.
 - A settings window (`/jd options`): label, value-only display, stack size, quality dots, coin style, tooltip rows, confirmations, and chat reports of deleted items. It follows your EllesmereUI theme when that addon is installed.

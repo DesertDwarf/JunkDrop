@@ -36,9 +36,11 @@ Items are ranked, and the first in line is dropped first. In **Settings**:
 - **What can be dropped:** choose any of Poor, Common, Uncommon, Rare and Epic. Only Poor is on by default.
 - **Drop order:** either *lowest quality first* (then cheapest), or *cheapest price first* regardless of quality.
 
+**Quest items are never dropped, at any quality**: that means items you need for a quest and items that start one.
+
 Safeguards for anything better than Poor:
 
-- An item must have a vendor price, and quest items are never picked. So the Hearthstone, which sells for nothing, can never look like the cheapest item in your bags.
+- An item must have a vendor price. So the Hearthstone, which sells for nothing, can never look like the cheapest item in your bags.
 - A confirmation window lists exactly what will be deleted, and deletes only that. You can turn it off in Settings.
 
 ### Never drop

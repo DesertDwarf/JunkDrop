@@ -41,7 +41,7 @@ A stack is one bag slot, and its value is the vendor price of the whole stack. A
 
 You can choose which item qualities may be dropped (Poor, Common, Uncommon, Rare, Epic), and whether to drop the lowest quality first or simply the cheapest price first.
 
-Safeguards for anything better than Poor: an item must have a vendor price (so the Hearthstone is never picked), quest items are never picked, and a confirmation window lists exactly what will be deleted.
+Quest items (ones you need for a quest, or that start one) are never picked, at any quality. Safeguards for anything better than Poor: an item must have a vendor price (so the Hearthstone is never picked), and a confirmation window lists exactly what will be deleted.
 
 ### Never drop
 

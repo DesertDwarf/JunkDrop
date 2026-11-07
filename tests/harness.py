@@ -11,6 +11,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
 
+def lua_value(value):
+    """A Python value as Lua source. bool is checked first because Python counts 1 as True."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return '"%s"' % value if isinstance(value, str) else str(value)
+
+
 def read(path):
     with open(path, encoding="utf-8-sig") as handle:
         return handle.read()
@@ -34,9 +41,11 @@ def quality_dots(*qualities):
 class Env:
     """One fresh addon instance. Lua values come back as plain Python values where they can."""
 
-    def __init__(self, ellesmere=False):
+    def __init__(self, ellesmere=False, setup=None):
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.lua.execute(read(os.path.join(HERE, "wow_mock.lua")))
+        if setup:  # Lua to run before the addon loads, e.g. to take a function away from the client
+            self.lua.execute(setup)
         if ellesmere:  # EllesmereUI loads first, so it exists when our files register their skin
             self.lua.execute(
                 "EllesmereUI = { RegisterSkin = function(name, fn) tinsert(Registrations, { name = name, fn = fn }) end }"
@@ -58,18 +67,13 @@ class Env:
     def bag(self, items):
         """Set the bag to a list of (name, quality, price, count, item class[, max stack, family]).
         An emptied slot is ("", -1, 0, 0, 0)."""
-        rows = ", ".join('{ "%s", %s }' % (item[0], ", ".join(str(v) for v in item[1:])) for item in items)
+        rows = ", ".join('{ "%s", %s }' % (item[0], ", ".join(lua_value(v) for v in item[1:])) for item in items)
         self.run("SetBag({ %s })" % rows)
 
     def loot(self, items):
         """Set the loot window to a list of dicts: name, quality, price, qty, class, max, family,
         quest, slot (1 item, 2 money, 0 looted), uncached. Anything left out gets a default."""
-        def lua(value):
-            # bool is checked first because Python counts 1 as True and 0 as False.
-            if isinstance(value, bool):
-                return "true" if value else "false"
-            return '"%s"' % value if isinstance(value, str) else str(value)
-        rows = ", ".join("{ %s }" % ", ".join("%s = %s" % (k, lua(v)) for k, v in item.items()) for item in items)
+        rows = ", ".join("{ %s }" % ", ".join("%s = %s" % (k, lua_value(v)) for k, v in item.items()) for item in items)
         self.run("SetLoot({ %s })" % rows)
 
     def fire(self, event):

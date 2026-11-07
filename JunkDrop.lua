@@ -7,6 +7,7 @@ local _, JD = ... -- Addon name and the table shared between this addon's files.
 -- globals are gone there. Bind locals so call sites below work on either API.
 local GetContainerNumSlots = C_Container and C_Container.GetContainerNumSlots or GetContainerNumSlots
 local GetContainerItemLink = C_Container and C_Container.GetContainerItemLink or GetContainerItemLink
+local GetContainerItemQuestInfo = C_Container and C_Container.GetContainerItemQuestInfo or GetContainerItemQuestInfo
 local PickupContainerItem = C_Container and C_Container.PickupContainerItem or PickupContainerItem
 local GetItemInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
 
@@ -186,17 +187,36 @@ end
 
 local QuestClassID = Enum and Enum.ItemClass and Enum.ItemClass.Questitem or 12
 
--- Whether an item may be dropped under the current settings. Anything better than Poor must
--- also have a vendor price and not be a quest item. That keeps things like the Hearthstone,
--- which sells for nothing, from looking like the cheapest item in the bags.
-local function IsCandidate(Quality, SellPrice, ClassID)
+-- Whether the game's quest info for a bag slot marks it as a quest item: needed for a quest, or
+-- starting one. The modern API returns a table ({ isQuestItem, questID, isActive }); the old
+-- global returns the same things as separate values.
+local function IsQuestFlag(First, Second)
+  if type(First) == "table" then
+    return First.isQuestItem == true or (First.questID or 0) ~= 0
+  end
+  return First == true or (Second or 0) ~= 0
+end
+
+-- A quest item is one of the Quest class, or one the game flags as part of a quest. Items for
+-- quests sit in other classes too, so the flag is checked as well as the class.
+local function IsQuestItem(Bag, Slot, ClassID)
+  if ClassID == QuestClassID then
+    return true
+  end
+  return GetContainerItemQuestInfo ~= nil and IsQuestFlag(GetContainerItemQuestInfo(Bag, Slot))
+end
+
+-- Whether an item may be dropped under the current settings. A quest item never is, at any
+-- quality. Anything better than Poor must also have a vendor price, which keeps things like the
+-- Hearthstone, which sells for nothing, from looking like the cheapest item in the bags.
+local function IsCandidate(Quality, SellPrice, ClassID, Bag, Slot)
   if not Quality or not JD.Get("Include" .. Quality) then
     return false
   end
-  if Quality == 0 then
-    return true
+  if Quality > 0 and not (SellPrice > 0) then
+    return false
   end
-  return SellPrice > 0 and ClassID ~= QuestClassID
+  return not IsQuestItem(Bag, Slot, ClassID) -- Last, as it asks the game about this slot.
 end
 
 -- Every stack in the bags that may be dropped, in the order they would be dropped. The order is
@@ -208,7 +228,7 @@ local function GetJunkStacks()
   local Protected = ParseTerms(JD.Get("Protect"))
   ForEachBagItem(function(Bag, Slot, ItemLink)
     local Name, _, Quality, _, _, _, _, _, _, Icon, SellPrice, ClassID = GetItemInfo(ItemLink)
-    if IsCandidate(Quality, SellPrice, ClassID) and not MatchesTerms(Name, Protected) then
+    if IsCandidate(Quality, SellPrice, ClassID, Bag, Slot) and not MatchesTerms(Name, Protected) then
       local ItemCount = GetStackCount(Bag, Slot)
       tinsert(JunkStacks, {
         Link = ItemLink,
@@ -257,7 +277,7 @@ local function TestFilter(Text)
       tinsert(Matches, {
         Link = ItemLink,
         Count = GetStackCount(Bag, Slot),
-        WouldDrop = IsCandidate(Quality, SellPrice, ClassID),
+        WouldDrop = IsCandidate(Quality, SellPrice, ClassID, Bag, Slot),
       })
     end
   end)
@@ -334,6 +354,7 @@ JD.GetJunkStacks = GetJunkStacks
 JD.TestFilter = TestFilter
 JD.FormatCoins = FormatCoins
 JD.DropStacks = DropStacks
+JD.IsQuestFlag = IsQuestFlag
 JD.ForEachBagItem = ForEachBagItem
 JD.GetStackCount = GetStackCount
 JD.LastBag = LastBag

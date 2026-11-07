@@ -187,5 +187,64 @@ class OptionsWindow(Fresh):
         self.assertTrue(self.env.ev("OptionsWindow._shown == true"))
 
 
+# Fields: name, quality, price, count, item class, max stack, family, quest flag, ID of a quest it starts.
+QUEST_BAG = [
+    ("Chipped Claw", 0, 4, 1, 15),
+    ("Grey Quest Thing", 0, 1, 1, 12),  # the Quest item class
+    ("Odd Grey Note", 0, 1, 1, 15, 1, 0, True),  # another class, but the game flags it as a quest item
+    ("Torn Page", 0, 1, 1, 15, 1, 0, False, 1234),  # starts a quest
+    ("Flagged Common", 1, 10, 1, 15, 1, 0, True),
+]
+
+
+class QuestItems(unittest.TestCase):
+    def setUp(self):
+        self.env = Env()
+        self.env.bag(QUEST_BAG)
+        self.env.run("ResetState()")
+
+    def test_poor_quest_items_are_never_picked_whichever_way_they_are_marked(self):
+        self.assertEqual(self.env.order(), "Chipped Claw")
+
+    def test_nor_are_better_ones(self):
+        self.env.set(Include1=True)
+        self.assertEqual(self.env.order(), "Chipped Claw")
+
+    def test_all_leaves_them_alone(self):
+        self.env.set(Include1=True, ConfirmHigher=False)
+        self.env.cmd("all")
+        self.assertEqual(self.env.deleted(), "Chipped Claw")
+
+    def test_the_bar_never_offers_one(self):
+        self.assertEqual(self.env.bar_text(), "JunkDrop %s: Chipped Claw 4c" % quality_dots(0))
+
+    def test_the_test_button_says_they_are_not_on_the_drop_list(self):
+        self.env.lua.eval("NS.TestFilter")("quest, note, page")
+        out = self.env.ev("FlushChat()")
+        # The quest-class item, the flagged one and the quest starter: all three are left alone.
+        self.assertEqual(out.count("not on the drop list anyway"), 3)
+
+    def test_the_game_reports_the_flag_as_a_table_or_as_separate_values(self):
+        for expression, expected in [
+            ("{ isQuestItem = true }", True),
+            ("{ questID = 5 }", True),
+            ("{ isQuestItem = false, questID = 0 }", False),
+            ("{}", False),
+            ("true, nil, false", True),
+            ("false, 7, false", True),
+            ("false, nil, false", False),
+            ("nil", False),
+        ]:
+            self.assertEqual(self.env.ev("NS.IsQuestFlag(%s)" % expression), expected, expression)
+
+    def test_a_client_without_the_quest_info_call_still_excludes_the_quest_class(self):
+        env = Env(setup="C_Container.GetContainerItemQuestInfo = nil")
+        env.bag(QUEST_BAG)
+        env.run("ResetState()")
+        # Only the class can be checked there, so the flagged and quest-starting items are not known.
+        # They are 1c each, so they come ahead of the 4c claw. The Quest-class item is still left out.
+        self.assertEqual(env.order(), "Odd Grey Note, Torn Page, Chipped Claw")
+
+
 if __name__ == "__main__":
     unittest.main()

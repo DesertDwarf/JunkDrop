@@ -141,6 +141,11 @@ C_Container = {
   end,
   GetContainerItemInfo = function(b, s) local item = bag[s]; return item and { stackCount = item[4] } end,
   PickupContainerItem = function(_, s) cursor = s end,
+  -- Bag items may carry a quest flag (8th field) and the ID of a quest they start (9th field).
+  GetContainerItemQuestInfo = function(_, s)
+    local item = bag[s]
+    return { isQuestItem = item ~= nil and item[8] == true, questID = item and item[9] or nil, isActive = false }
+  end,
   -- Free slots are the emptied ones; every bag is a general bag unless a test says otherwise.
   GetContainerNumFreeSlots = function(b)
     local free = 0
