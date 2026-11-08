@@ -301,6 +301,33 @@ class Acknowledgements(unittest.TestCase):
         self.assertEqual(self.popup(2), "JUNKDROP_ACK")
         self.assertEqual(self.env.deleted(), "Chipped Claw")  # the second click deleted nothing yet
 
+    def test_the_reset_button_in_the_options_window_brings_the_warning_back(self):
+        # The real route a player takes: accept the warning, open the options, press the button.
+        self.click()
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertTrue(self.flag("AckClick"))
+        self.env.cmd("options")
+        self.env.run("OptionsWindow.ResetButton._OnClick()")
+        self.assertFalse(self.flag("AckClick"))
+        self.click()
+        self.assertEqual(self.popup(2), "JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "Chipped Claw")  # only the first, accepted delete happened
+
+    def test_the_reset_button_also_brings_back_the_all_warning(self):
+        self.env.cmd("all")
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertTrue(self.flag("AckAll"))
+        self.env.cmd("options")
+        self.env.run("OptionsWindow.ResetButton._OnClick()")
+        self.assertFalse(self.flag("AckAll"))
+
+    def test_there_is_no_slash_reset_command(self):
+        # "/jd reset" is not a command: it is refused like any unknown option and changes nothing.
+        self.click()
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertIn("Unknown option 'reset'", self.env.cmd("reset"))
+        self.assertTrue(self.flag("AckClick"))
+
     def test_a_player_who_chose_to_confirm_every_click_is_not_also_given_the_warning(self):
         self.env.set(ConfirmClick=True)
         self.click()
