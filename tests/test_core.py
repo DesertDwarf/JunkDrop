@@ -246,5 +246,44 @@ class QuestItems(unittest.TestCase):
         self.assertEqual(env.order(), "Odd Grey Note, Torn Page, Chipped Claw")
 
 
+# What a new player gets. Changing one of these changes everyone's first experience, so a test
+# pins them: change the value here on purpose, together with the README and the options window.
+EXPECTED_DEFAULTS = {
+    "Label": "full", "Show": "both", "Dots": True, "ShowCount": True, "Coins": "icons", "TooltipRows": 5,
+    "ConfirmClick": False, "ReportDrops": True,
+    "Include0": True, "Include1": False, "Include2": False, "Include3": False, "Include4": False,
+    "Order": "quality", "ConfirmHigher": True, "Protect": "",
+    "Glow": True, "LootNote": True, "LootDrop": True,
+}
+
+
+class Defaults(unittest.TestCase):
+    def setUp(self):
+        self.env = Env()
+
+    def get(self, key):
+        return self.env.ev("NS.Get('%s')" % key)
+
+    def test_every_setting_starts_as_intended(self):
+        for key, want in EXPECTED_DEFAULTS.items():
+            self.assertEqual(self.get(key), want, key)
+
+    def test_there_is_no_setting_without_a_pinned_default(self):
+        count = self.env.ev("(function() local n = 0 for _ in pairs(NS.Defaults) do n = n + 1 end return n end)()")
+        self.assertEqual(count, len(EXPECTED_DEFAULTS))
+
+    def test_only_poor_items_can_be_dropped_until_the_player_chooses_otherwise(self):
+        self.assertEqual([self.get("Include%d" % q) for q in range(5)], [True, False, False, False, False])
+
+    def test_reset_to_defaults_restores_every_one(self):
+        # Flip every setting away from its default, then reset.
+        for key, want in EXPECTED_DEFAULTS.items():
+            other = (not want) if isinstance(want, bool) else ("x" if isinstance(want, str) else want + 1)
+            self.env.set(**{key: other})
+        self.env.run("NS.Reset()")
+        for key, want in EXPECTED_DEFAULTS.items():
+            self.assertEqual(self.get(key), want, key)
+
+
 if __name__ == "__main__":
     unittest.main()
