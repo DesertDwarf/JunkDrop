@@ -45,6 +45,8 @@ JD.Defaults = {
   Glow = true, -- Pulse a red glow around the next stack to drop when the bags are open.
   LootNote = true, -- Beside the loot window, say whether to take each item that won't fit.
   LootDrop = true, -- Put a button on that note that drops the stacks it suggests.
+  AckClick = false, -- Set once the player has accepted the one-time warning before a bar click deletes.
+  AckAll = false, -- The same for "/jd all". Neither is in the options window; Reset to defaults clears them.
 }
 
 local function SettingsChanged()
@@ -323,10 +325,52 @@ StaticPopupDialogs["JUNKDROP_CONFIRM_RUN"] = {
   hideOnEscape = true,
 }
 
--- Delete the given stacks, asking first when any of them is better than Poor and the settings
--- say to. Report says whether to print each deleted stack. Shared by the slash command and the
--- loot note's button, so both follow the same safeguards.
-local function DropStacks(Targets, Report)
+-- A short list of what is about to be deleted, for the pop-ups.
+local function ListStacks(Targets)
+  local Lines = {}
+  for Rank = 1, math.min(#Targets, 6) do
+    tinsert(Lines, Targets[Rank].Link .. " x" .. Targets[Rank].Count)
+  end
+  if #Targets > 6 then
+    tinsert(Lines, "...and " .. (#Targets - 6) .. " more")
+  end
+  return table.concat(Lines, "\n")
+end
+
+-- The one-time warnings. Each is shown the first time a delete would otherwise happen with no
+-- question asked, and Key is the saved setting that remembers the player accepted it. These are
+-- standard pop-ups, so they look like Blizzard's, or follow the player's EllesmereUI theme.
+local ClickAck = {
+  Key = "AckClick",
+  Intro = "JunkDrop deletes items. It does not sell them, and a deleted item cannot be recovered.\n\n"
+    .. "Clicking the bar item deletes the first stack listed:",
+  Outro = "Choose I understand to delete it now. You won't be warned about this again.",
+}
+local AllAck = {
+  Key = "AckAll",
+  Intro = "/jd all deletes every item that qualifies, right now. It does not sell them, and a deleted "
+    .. "item cannot be recovered. This time that is:",
+  Outro = "Choose I understand to delete them now. You won't be warned about this again.",
+}
+
+StaticPopupDialogs["JUNKDROP_ACK"] = {
+  text = "%s",
+  button1 = "I understand",
+  button2 = CANCEL,
+  OnAccept = function(_, Data)
+    JD.Set(Data.Key, true)
+    DeleteStacks(Data.Targets, Data.Report)
+  end,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+}
+
+-- Delete the given stacks. When any is better than Poor and the settings say so, ask first. Failing
+-- that, if Ack (one of the warnings above) is given and the player has not accepted it yet, show it
+-- instead. Report says whether to print each deleted stack. Shared by the slash command, the bar
+-- item and the loot note's button, so they follow the same safeguards.
+local function DropStacks(Targets, Report, Ack)
   local HasBetterThanPoor = false
   for _, Stack in ipairs(Targets) do
     if Stack.Quality > 0 then
@@ -336,14 +380,10 @@ local function DropStacks(Targets, Report)
 
   if HasBetterThanPoor and JD.Get("ConfirmHigher") then
     -- Show exactly what will go, and delete exactly that if the player agrees.
-    local Lines = {}
-    for Rank = 1, math.min(#Targets, 6) do
-      tinsert(Lines, Targets[Rank].Link .. " x" .. Targets[Rank].Count)
-    end
-    if #Targets > 6 then
-      tinsert(Lines, "...and " .. (#Targets - 6) .. " more")
-    end
-    StaticPopup_Show("JUNKDROP_CONFIRM_RUN", table.concat(Lines, "\n"), nil, Targets)
+    StaticPopup_Show("JUNKDROP_CONFIRM_RUN", ListStacks(Targets), nil, Targets)
+  elseif Ack and #Targets > 0 and not JD.Get(Ack.Key) then
+    StaticPopup_Show("JUNKDROP_ACK", Ack.Intro .. "\n\n" .. ListStacks(Targets) .. "\n\n" .. Ack.Outro,
+      nil, { Key = Ack.Key, Targets = Targets, Report = Report })
   else
     DeleteStacks(Targets, Report)
   end
@@ -354,6 +394,7 @@ JD.GetJunkStacks = GetJunkStacks
 JD.TestFilter = TestFilter
 JD.FormatCoins = FormatCoins
 JD.DropStacks = DropStacks
+JD.ClickAck = ClickAck
 JD.IsQuestFlag = IsQuestFlag
 JD.ForEachBagItem = ForEachBagItem
 JD.GetStackCount = GetStackCount
@@ -434,7 +475,8 @@ function JunkDrop(SlashArg)
     for Rank = 1, DropTotal do
       tinsert(Targets, JunkStacks[Rank])
     end
-    DropStacks(Targets, JD.Get("ReportDrops") and not DebugOn) -- Debug already lists what is dropped.
+    -- Debug already lists what is dropped. Only "all" carries the one-time warning.
+    DropStacks(Targets, JD.Get("ReportDrops") and not DebugOn, DropAll and AllAck or nil)
   end
 end
 

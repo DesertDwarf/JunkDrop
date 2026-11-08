@@ -18,7 +18,7 @@ Type `/jd` or `/junkdrop`, followed by any of these options:
 | --- | --- |
 | `/jd` | Delete the next stack in line |
 | `/jd 3` | Delete the next 3 stacks |
-| `/jd all` | Delete every stack that qualifies (cannot be combined with a number) |
+| `/jd all` | Delete every stack that qualifies (cannot be combined with a number). The first time, a warning asks you to confirm |
 | `/jd list` | Delete nothing; show the next stack in line. Handy for deciding whether a new item is worth looting |
 | `/jd list 3` or `/jd list all` | Show the next 3 stacks, or every stack, in drop order |
 | `/jd debug` | Show every stack found, in drop order, and mark the ones that are (or would be) dropped |
@@ -53,6 +53,7 @@ JunkDrop adds an item to any bar that supports data-broker (LibDataBroker) plugi
 
 - It shows the next stack in line, with its value, next to the name. A colored dot after the name shows which qualities are selected.
 - Hovering lists the next few stacks. **Left-click** deletes the first stack listed. **Right-click** opens Settings.
+- The first time you left-click to delete, and the first time you use `/jd all`, a warning shows exactly what would go and asks you to confirm. After you accept it, it doesn't appear again. "Reset to defaults" in Settings brings the warnings back.
 
 ## Glow in your bags
 

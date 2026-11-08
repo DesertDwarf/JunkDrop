@@ -112,8 +112,9 @@ class Env:
     def popup_count(self):
         return self.ev("#Popups")
 
-    def accept_popup(self, which="JUNKDROP_CONFIRM_RUN"):
-        self.run('StaticPopupDialogs["%s"].OnAccept(nil, Popups[1].data)' % which)
+    def accept_popup(self, which="JUNKDROP_CONFIRM_RUN", index=1):
+        """Press the accept button of the index-th pop-up shown (counting from 1)."""
+        self.run('StaticPopupDialogs["%s"].OnAccept(nil, Popups[%d].data)' % (which, index))
 
 
 def default_bag():

@@ -58,7 +58,7 @@ Type `/jd` or `/junkdrop`:
 
 ### On your bar
 
-JunkDrop adds an item to data-broker bars (EllesmereUI, ElvUI DataTexts, Titan Panel and others). It shows the next stack and its value, with colored dots for the qualities you've chosen. Hover to see the next few stacks, left-click to delete the first one, right-click for settings.
+JunkDrop adds an item to data-broker bars (EllesmereUI, ElvUI DataTexts, Titan Panel and others). It shows the next stack and its value, with colored dots for the qualities you've chosen. Hover to see the next few stacks, left-click to delete the first one, right-click for settings. The first time you click to delete, and the first time you use `/jd all`, a one-time warning asks you to confirm.
 
 ### Glow in your bags
 

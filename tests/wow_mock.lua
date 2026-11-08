@@ -15,7 +15,7 @@ bit = { band = function(a, b)
 end }
 UISpecialFrames = {}
 UIParent = {}
-YES, NO = "Yes", "No"
+YES, NO, CANCEL = "Yes", "No", "Cancel"
 NUM_BAG_SLOTS = 4
 Enum = { BagIndex = { ReagentBag = 5 } }
 ITEM_QUALITY0_DESC, ITEM_QUALITY1_DESC, ITEM_QUALITY2_DESC = "Poor", "Common", "Uncommon"

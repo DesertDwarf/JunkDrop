@@ -44,7 +44,7 @@ class Filter(unittest.TestCase):
         self.assertEqual(self.env.order(), EVERYTHING)
 
     def test_all_leaves_protected_items_alone(self):
-        self.env.set(Protect="knife, fishing pole, bag", ConfirmHigher=False)
+        self.env.set(Protect="knife, fishing pole, bag", ConfirmHigher=False, AckAll=True)  # AckAll: past the one-time warning
         self.env.cmd("all")
         self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk, Wooden Sword, Linen Cloth")
 

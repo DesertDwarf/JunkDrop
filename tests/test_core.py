@@ -211,7 +211,7 @@ class QuestItems(unittest.TestCase):
         self.assertEqual(self.env.order(), "Chipped Claw")
 
     def test_all_leaves_them_alone(self):
-        self.env.set(Include1=True, ConfirmHigher=False)
+        self.env.set(Include1=True, ConfirmHigher=False, AckAll=True)  # past the one-time warning
         self.env.cmd("all")
         self.assertEqual(self.env.deleted(), "Chipped Claw")
 
@@ -246,6 +246,136 @@ class QuestItems(unittest.TestCase):
         self.assertEqual(env.order(), "Odd Grey Note, Torn Page, Chipped Claw")
 
 
+class Acknowledgements(unittest.TestCase):
+    """The one-time warnings before a delete that would otherwise happen with no question asked."""
+
+    def setUp(self):
+        self.env = Env()
+        self.env.bag(default_bag())
+        self.env.run("ResetState()")
+
+    def click(self):
+        self.env.run('LDB.OnClick(nil, "LeftButton")')
+
+    def popup(self, index=1):
+        return self.env.ev("Popups[%d].which" % index)
+
+    def text(self, index=1):
+        return self.env.ev("Popups[%d].text" % index)
+
+    def flag(self, key):
+        return self.env.ev("NS.Get('%s')" % key)
+
+    # The bar item
+
+    def test_the_first_click_warns_and_deletes_nothing(self):
+        self.click()
+        self.assertEqual(self.popup(), "JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "")
+        self.assertIn("[Chipped Claw]", self.text())  # it says exactly what would go
+        self.assertIn("cannot be recovered", self.text())
+        self.assertIn("won't be warned about this again", self.text())
+
+    def test_accepting_deletes_and_it_never_asks_again(self):
+        self.click()
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "Chipped Claw")
+        self.assertTrue(self.flag("AckClick"))
+        self.click()
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")  # at once, no question
+        self.assertEqual(self.env.popup_count(), 1)
+
+    def test_cancelling_deletes_nothing_and_it_asks_again_next_time(self):
+        self.click()  # the pop-up is dismissed without pressing "I understand"
+        self.click()
+        self.assertEqual(self.env.popup_count(), 2)
+        self.assertEqual(self.env.deleted(), "")
+        self.assertFalse(self.flag("AckClick"))
+
+    def test_reset_to_defaults_brings_the_warning_back(self):
+        self.click()
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.env.run("NS.Reset()")
+        self.assertFalse(self.flag("AckClick"))
+        self.click()
+        self.assertEqual(self.popup(2), "JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "Chipped Claw")  # the second click deleted nothing yet
+
+    def test_a_player_who_chose_to_confirm_every_click_is_not_also_given_the_warning(self):
+        self.env.set(ConfirmClick=True)
+        self.click()
+        self.assertEqual(self.popup(), "JUNKDROP_CONFIRM")
+        self.assertEqual(self.env.popup_count(), 1)
+        self.assertFalse(self.flag("AckClick"))
+
+    def test_a_better_than_poor_target_gets_only_its_own_confirmation(self):
+        self.env.set(Include0=False, Include1=True)
+        self.click()
+        self.assertEqual(self.popup(), "JUNKDROP_CONFIRM_RUN")
+        self.assertEqual(self.env.popup_count(), 1)
+        self.assertFalse(self.flag("AckClick"))
+
+    def test_clicking_with_nothing_to_drop_shows_nothing(self):
+        self.env.bag([("Linen Cloth", 1, 5, 20, 7)])
+        self.click()
+        self.assertEqual(self.env.popup_count(), 0)
+
+    # "/jd all"
+
+    def test_all_warns_first_and_lists_what_it_would_delete(self):
+        self.env.cmd("all")
+        self.assertEqual(self.popup(), "JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "")
+        self.assertIn("/jd all", self.text())
+        self.assertIn("[Chipped Claw]", self.text())
+        self.assertIn("[Broken Boar Tusk]", self.text())
+        self.assertFalse(self.flag("AckAll"))
+
+    def test_accepting_it_deletes_everything_and_it_never_asks_again(self):
+        self.env.cmd("all")
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
+        self.assertTrue(self.flag("AckAll"))
+        self.env.bag([("Wolf Pelts", 0, 2, 6, 15)])
+        self.env.cmd("all")
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk, Wolf Pelts")
+        self.assertEqual(self.env.popup_count(), 1)
+
+    def test_all_with_nothing_to_drop_shows_nothing(self):
+        self.env.bag([("Linen Cloth", 1, 5, 20, 7)])
+        self.env.cmd("all")
+        self.assertEqual(self.env.popup_count(), 0)
+
+    def test_all_with_better_items_asks_its_own_question_instead(self):
+        self.env.set(Include1=True)
+        self.env.cmd("all")
+        self.assertEqual(self.popup(), "JUNKDROP_CONFIRM_RUN")
+        self.assertEqual(self.env.popup_count(), 1)
+
+    def test_other_slash_commands_are_never_warned(self):
+        self.env.cmd("")
+        self.env.cmd("2")
+        self.assertEqual(self.env.popup_count(), 0)
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
+
+    # Both
+
+    def test_the_two_warnings_are_independent(self):
+        self.click()
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.env.cmd("all")
+        self.assertEqual(self.popup(2), "JUNKDROP_ACK")  # accepting the bar warning did not cover "all"
+        self.assertFalse(self.flag("AckAll"))
+
+    def test_the_loot_note_button_is_not_covered_by_either(self):
+        self.env.bag([("Chipped Claw", 0, 4, 1, 15)])
+        self.env.loot([dict(name="Silk Cloth", quality=1, price=30)])
+        self.env.fire("LOOT_OPENED")
+        self.env.run("LootNote.DropButton._OnClick()")
+        self.assertEqual(self.env.deleted(), "Chipped Claw")  # it deletes at once, as before
+        self.assertEqual(self.env.popup_count(), 0)
+
+
 # What a new player gets. Changing one of these changes everyone's first experience, so a test
 # pins them: change the value here on purpose, together with the README and the options window.
 EXPECTED_DEFAULTS = {
@@ -254,6 +384,7 @@ EXPECTED_DEFAULTS = {
     "Include0": True, "Include1": False, "Include2": False, "Include3": False, "Include4": False,
     "Order": "quality", "ConfirmHigher": True, "Protect": "",
     "Glow": True, "LootNote": True, "LootDrop": True,
+    "AckClick": False, "AckAll": False,
 }
 
 

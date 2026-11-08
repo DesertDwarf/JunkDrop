@@ -68,8 +68,9 @@ local broker = ldb:NewDataObject("JunkDrop-LDB", {
 			-- Anything better than Poor is confirmed by JunkDrop() itself, so only ask here for Poor.
 			if Stack and Stack.Quality == 0 and JD.Get("ConfirmClick") then
 				StaticPopup_Show("JUNKDROP_CONFIRM", Stack.Link .. " x" .. Stack.Count .. " (" .. JD.FormatCoins(Stack.Value) .. ")")
-			else
-				JunkDrop()
+			elseif Stack then
+				-- The first time, with nothing else asking, a one-time warning comes first.
+				JD.DropStacks({ Stack }, JD.Get("ReportDrops"), JD.ClickAck)
 			end
 		elseif msg == "RightButton" then
 			JD.OpenOptions()
