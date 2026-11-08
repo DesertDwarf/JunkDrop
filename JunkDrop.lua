@@ -45,7 +45,7 @@ JD.Defaults = {
   Glow = true, -- Pulse a red glow around the next stack to drop when the bags are open.
   LootNote = true, -- Beside the loot window, say whether to take each item that won't fit.
   LootDrop = true, -- Put a button on that note that drops the stacks it suggests.
-  AckClick = false, -- Set once the player has accepted the one-time warning before a bar click deletes.
+  AckDrop = false, -- Set once the player has accepted the one-time warning before a bar click or /jd deletes.
   AckAll = false, -- The same for "/jd all". Neither is in the options window; Reset to defaults clears them.
 }
 
@@ -78,6 +78,28 @@ end
 function JD.Reset()
   JunkDropDB = {}
   SettingsChanged()
+  if JD.SyncOptions then
+    JD.SyncOptions() -- An open options window should show the defaults again.
+  end
+end
+
+-- Resetting clears every setting, including the player's Never drop words and the one-time
+-- warnings, so it always asks first. The Reset to defaults button and /jd reset both come here.
+StaticPopupDialogs["JUNKDROP_CONFIRM_RESET"] = {
+  text = "Reset all JunkDrop settings to their defaults?\n\n"
+    .. "This also clears your Never drop words and brings the one-time warnings back.",
+  button1 = "Reset",
+  button2 = CANCEL,
+  OnAccept = function()
+    JD.Reset()
+  end,
+  timeout = 0,
+  whileDead = true,
+  hideOnEscape = true,
+}
+
+function JD.ConfirmReset()
+  StaticPopup_Show("JUNKDROP_CONFIRM_RESET")
 end
 
 -- Formats a copper amount as coins, in the style chosen in the settings.
@@ -138,6 +160,7 @@ local HelpLines = {
   "  list <number> or list all - show that many stacks, or every stack, in drop order.",
   "  debug - show every stack found, in drop order, and mark the ones that are or would be dropped.",
   "  options - open the settings window (also: right-click the LDB item).",
+  "  reset - reset every setting to its default (asks first).",
   "  help - show this text.",
   "Options can be combined, for example /jd list 3 or /jd 3 debug.",
   "A stack is one bag slot, and its value is the vendor price of the whole stack.",
@@ -340,11 +363,13 @@ end
 -- The one-time warnings. Each is shown the first time a delete would otherwise happen with no
 -- question asked, and Key is the saved setting that remembers the player accepted it. These are
 -- standard pop-ups, so they look like Blizzard's, or follow the player's EllesmereUI theme.
-local ClickAck = {
-  Key = "AckClick",
+-- DropAck covers an ordinary drop, whether it comes from a click on the bar item or a typed /jd,
+-- so it reads the same either way and accepting it in one place covers the other.
+local DropAck = {
+  Key = "AckDrop",
   Intro = "JunkDrop deletes items. It does not sell them, and a deleted item cannot be recovered.\n\n"
-    .. "Clicking the bar item deletes the first stack listed:",
-  Outro = "Choose I understand to delete it now. You won't be warned about this again.",
+    .. "Clicking the bar item, or typing /jd, deletes items from your bags, lowest value first. This time:",
+  Outro = "Choose I understand to delete now. You won't be warned about this again.",
 }
 local AllAck = {
   Key = "AckAll",
@@ -394,7 +419,7 @@ JD.GetJunkStacks = GetJunkStacks
 JD.TestFilter = TestFilter
 JD.FormatCoins = FormatCoins
 JD.DropStacks = DropStacks
-JD.ClickAck = ClickAck
+JD.DropAck = DropAck
 JD.IsQuestFlag = IsQuestFlag
 JD.ForEachBagItem = ForEachBagItem
 JD.GetStackCount = GetStackCount
@@ -416,6 +441,9 @@ function JunkDrop(SlashArg)
       DropAll = true
     elseif Argument == "options" then
       JD.OpenOptions()
+      return
+    elseif Argument == "reset" then
+      JD.ConfirmReset()
       return
     elseif Argument == "help" or Argument == "?" then
       ShowHelp()
@@ -475,8 +503,9 @@ function JunkDrop(SlashArg)
     for Rank = 1, DropTotal do
       tinsert(Targets, JunkStacks[Rank])
     end
-    -- Debug already lists what is dropped. Only "all" carries the one-time warning.
-    DropStacks(Targets, JD.Get("ReportDrops") and not DebugOn, DropAll and AllAck or nil)
+    -- Debug already lists what is dropped. A delete with no question asked carries a one-time warning:
+    -- the shared one for an ordinary drop, and its own for "all".
+    DropStacks(Targets, JD.Get("ReportDrops") and not DebugOn, DropAll and AllAck or DropAck)
   end
 end
 

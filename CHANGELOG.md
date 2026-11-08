@@ -17,7 +17,8 @@ Updated for current World of Warcraft, with many new features.
 - A settings window (`/jd options`): label, value-only display, stack size, quality dots, coin style, tooltip rows, confirmations, and chat reports of deleted items. It follows your EllesmereUI theme when that addon is installed.
 - With EllesmereUI Bags installed, the next stack to be dropped pulses with a red glow while your bags are open (optional).
 - When your bags are full and the loot window is open, a note beside it says whether each item that won't fit is worth taking, and which of your items to drop for it. A button drops the suggested stacks, with the same confirmation as everything else (optional). The note follows your EllesmereUI theme when that addon is installed.
-- The first time you delete with a click on the bar item, and the first time you use `/jd all`, a one-time warning shows what would go and asks you to confirm. Accepting it once is enough; "Reset to defaults" brings the warnings back.
+- The first time you delete with a click on the bar item or with `/jd`, and the first time you use `/jd all`, a one-time warning shows what would go and asks you to confirm. A click and a typed `/jd` share one warning. Accepting it once is enough; resetting your settings brings the warnings back.
+- `/jd reset` resets every setting to its default, and the Reset to defaults button now does the same. Both ask first.
 - Fixed: the reagent bag is now scanned on retail.
 
 ## v0.8

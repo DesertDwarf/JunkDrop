@@ -16,13 +16,14 @@ Type `/jd` or `/junkdrop`, followed by any of these options:
 
 | Command | What it does |
 | --- | --- |
-| `/jd` | Delete the next stack in line |
+| `/jd` | Delete the next stack in line. The first time, a warning asks you to confirm |
 | `/jd 3` | Delete the next 3 stacks |
 | `/jd all` | Delete every stack that qualifies (cannot be combined with a number). The first time, a warning asks you to confirm |
 | `/jd list` | Delete nothing; show the next stack in line. Handy for deciding whether a new item is worth looting |
 | `/jd list 3` or `/jd list all` | Show the next 3 stacks, or every stack, in drop order |
 | `/jd debug` | Show every stack found, in drop order, and mark the ones that are (or would be) dropped |
 | `/jd options` | Open the settings window (right-clicking the bar item does the same) |
+| `/jd reset` | Reset every setting to its default. It asks first, because it also clears your Never drop words |
 | `/jd help` | List the commands |
 
 Options can be combined, for example `/jd list 3` or `/jd 3 debug`. An option JunkDrop doesn't recognize is refused, and nothing is deleted.
@@ -53,7 +54,7 @@ JunkDrop adds an item to any bar that supports data-broker (LibDataBroker) plugi
 
 - It shows the next stack in line, with its value, next to the name. A colored dot after the name shows which qualities are selected.
 - Hovering lists the next few stacks. **Left-click** deletes the first stack listed. **Right-click** opens Settings.
-- The first time you left-click to delete, and the first time you use `/jd all`, a warning shows exactly what would go and asks you to confirm. After you accept it, it doesn't appear again. "Reset to defaults" in Settings brings the warnings back.
+- The first time you delete with a left-click or with `/jd` (or `/jd 3`), and the first time you use `/jd all`, a warning shows exactly what would go and asks you to confirm. The click and the typed command share one warning, so accepting it in either place covers both. `/jd all` has its own. After you accept, they don't appear again. Resetting your settings brings them back.
 
 ## Glow in your bags
 

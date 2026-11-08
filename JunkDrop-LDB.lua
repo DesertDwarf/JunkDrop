@@ -70,7 +70,7 @@ local broker = ldb:NewDataObject("JunkDrop-LDB", {
 				StaticPopup_Show("JUNKDROP_CONFIRM", Stack.Link .. " x" .. Stack.Count .. " (" .. JD.FormatCoins(Stack.Value) .. ")")
 			elseif Stack then
 				-- The first time, with nothing else asking, a one-time warning comes first.
-				JD.DropStacks({ Stack }, JD.Get("ReportDrops"), JD.ClickAck)
+				JD.DropStacks({ Stack }, JD.Get("ReportDrops"), JD.DropAck)
 			end
 		elseif msg == "RightButton" then
 			JD.OpenOptions()

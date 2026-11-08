@@ -13,6 +13,9 @@ local function SyncAll()
   end
 end
 
+-- After a reset, so an open window shows the defaults. With no window built, Syncs is empty.
+JD.SyncOptions = SyncAll
+
 -- Hand the window to EllesmereUI so it follows the player's chosen theme. EllesmereUI calls
 -- the registered function at login, usually before the window exists, so ApplySkin also runs
 -- when the window is built.
@@ -235,8 +238,7 @@ local function Build()
   Frame.ResetButton:SetPoint("BOTTOMRIGHT", -14, 12)
   Frame.ResetButton:SetText("Reset to defaults")
   Frame.ResetButton:SetScript("OnClick", function()
-    JD.Reset()
-    SyncAll()
+    JD.ConfirmReset() -- It asks first; confirming calls JD.Reset, which refreshes this window.
   end)
 
   ApplySkin()

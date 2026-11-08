@@ -8,6 +8,7 @@ class Fresh(unittest.TestCase):
         self.env = Env()
         self.env.bag(default_bag())
         self.env.run("ResetState()")
+        self.env.set(AckDrop=True)  # past the one-time warning, which has its own tests
 
 
 class Ranking(Fresh):
@@ -266,7 +267,7 @@ class Acknowledgements(unittest.TestCase):
     def flag(self, key):
         return self.env.ev("NS.Get('%s')" % key)
 
-    # The bar item
+    # An ordinary drop: a click on the bar item, or a typed /jd. One warning, one memory.
 
     def test_the_first_click_warns_and_deletes_nothing(self):
         self.click()
@@ -276,78 +277,86 @@ class Acknowledgements(unittest.TestCase):
         self.assertIn("cannot be recovered", self.text())
         self.assertIn("won't be warned about this again", self.text())
 
-    def test_accepting_deletes_and_it_never_asks_again(self):
+    def test_typing_jd_the_first_time_gives_the_same_warning(self):
+        self.env.cmd("")
+        self.assertEqual(self.popup(), "JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "")
+        self.assertIn("[Chipped Claw]", self.text())
+
+    def test_the_warning_reads_the_same_from_a_click_and_from_typing(self):
+        typed = Env()
+        typed.bag(default_bag())
+        typed.run("ResetState()")
+        typed.cmd("")
+        self.click()
+        self.assertEqual(typed.ev("Popups[1].text"), self.text())
+
+    def test_accepting_after_a_click_covers_typing_jd(self):
         self.click()
         self.env.accept_popup("JUNKDROP_ACK")
         self.assertEqual(self.env.deleted(), "Chipped Claw")
-        self.assertTrue(self.flag("AckClick"))
-        self.click()
-        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")  # at once, no question
+        self.env.cmd("")
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")  # at once
         self.assertEqual(self.env.popup_count(), 1)
+
+    def test_accepting_after_typing_covers_a_click(self):
+        self.env.cmd("")
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "Chipped Claw")
+        self.click()
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
+        self.assertEqual(self.env.popup_count(), 1)
+
+    def test_jd_with_a_count_is_warned_too_and_lists_every_stack(self):
+        self.env.cmd("2")
+        self.assertEqual(self.popup(), "JUNKDROP_ACK")
+        self.assertIn("[Chipped Claw]", self.text())
+        self.assertIn("[Broken Boar Tusk]", self.text())
+        self.assertEqual(self.env.deleted(), "")
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
+
+    def test_accepting_remembers(self):
+        self.click()
+        self.env.accept_popup("JUNKDROP_ACK")
+        self.assertTrue(self.flag("AckDrop"))
 
     def test_cancelling_deletes_nothing_and_it_asks_again_next_time(self):
         self.click()  # the pop-up is dismissed without pressing "I understand"
-        self.click()
+        self.env.cmd("")
         self.assertEqual(self.env.popup_count(), 2)
         self.assertEqual(self.env.deleted(), "")
-        self.assertFalse(self.flag("AckClick"))
+        self.assertFalse(self.flag("AckDrop"))
 
-    def test_reset_to_defaults_brings_the_warning_back(self):
-        self.click()
-        self.env.accept_popup("JUNKDROP_ACK")
-        self.env.run("NS.Reset()")
-        self.assertFalse(self.flag("AckClick"))
-        self.click()
-        self.assertEqual(self.popup(2), "JUNKDROP_ACK")
-        self.assertEqual(self.env.deleted(), "Chipped Claw")  # the second click deleted nothing yet
+    def test_listing_never_warns(self):
+        self.env.cmd("list")
+        self.env.cmd("list all")
+        self.env.cmd("debug list")
+        self.assertEqual(self.env.popup_count(), 0)
 
-    def test_the_reset_button_in_the_options_window_brings_the_warning_back(self):
-        # The real route a player takes: accept the warning, open the options, press the button.
-        self.click()
-        self.env.accept_popup("JUNKDROP_ACK")
-        self.assertTrue(self.flag("AckClick"))
-        self.env.cmd("options")
-        self.env.run("OptionsWindow.ResetButton._OnClick()")
-        self.assertFalse(self.flag("AckClick"))
-        self.click()
-        self.assertEqual(self.popup(2), "JUNKDROP_ACK")
-        self.assertEqual(self.env.deleted(), "Chipped Claw")  # only the first, accepted delete happened
-
-    def test_the_reset_button_also_brings_back_the_all_warning(self):
-        self.env.cmd("all")
-        self.env.accept_popup("JUNKDROP_ACK")
-        self.assertTrue(self.flag("AckAll"))
-        self.env.cmd("options")
-        self.env.run("OptionsWindow.ResetButton._OnClick()")
-        self.assertFalse(self.flag("AckAll"))
-
-    def test_there_is_no_slash_reset_command(self):
-        # "/jd reset" is not a command: it is refused like any unknown option and changes nothing.
-        self.click()
-        self.env.accept_popup("JUNKDROP_ACK")
-        self.assertIn("Unknown option 'reset'", self.env.cmd("reset"))
-        self.assertTrue(self.flag("AckClick"))
-
-    def test_a_player_who_chose_to_confirm_every_click_is_not_also_given_the_warning(self):
+    def test_a_player_who_confirms_every_click_is_not_also_given_the_warning_on_a_click(self):
         self.env.set(ConfirmClick=True)
         self.click()
         self.assertEqual(self.popup(), "JUNKDROP_CONFIRM")
         self.assertEqual(self.env.popup_count(), 1)
-        self.assertFalse(self.flag("AckClick"))
+        self.assertFalse(self.flag("AckDrop"))
 
     def test_a_better_than_poor_target_gets_only_its_own_confirmation(self):
         self.env.set(Include0=False, Include1=True)
         self.click()
         self.assertEqual(self.popup(), "JUNKDROP_CONFIRM_RUN")
-        self.assertEqual(self.env.popup_count(), 1)
-        self.assertFalse(self.flag("AckClick"))
+        self.env.cmd("")
+        self.assertEqual(self.popup(2), "JUNKDROP_CONFIRM_RUN")
+        self.assertEqual(self.env.popup_count(), 2)
+        self.assertFalse(self.flag("AckDrop"))
 
-    def test_clicking_with_nothing_to_drop_shows_nothing(self):
+    def test_nothing_to_drop_shows_nothing(self):
         self.env.bag([("Linen Cloth", 1, 5, 20, 7)])
         self.click()
+        self.env.cmd("")
         self.assertEqual(self.env.popup_count(), 0)
 
-    # "/jd all"
+    # "/jd all": its own warning, and its own memory
 
     def test_all_warns_first_and_lists_what_it_would_delete(self):
         self.env.cmd("all")
@@ -379,19 +388,11 @@ class Acknowledgements(unittest.TestCase):
         self.assertEqual(self.popup(), "JUNKDROP_CONFIRM_RUN")
         self.assertEqual(self.env.popup_count(), 1)
 
-    def test_other_slash_commands_are_never_warned(self):
-        self.env.cmd("")
-        self.env.cmd("2")
-        self.assertEqual(self.env.popup_count(), 0)
-        self.assertEqual(self.env.deleted(), "Chipped Claw, Broken Boar Tusk")
-
-    # Both
-
     def test_the_two_warnings_are_independent(self):
         self.click()
         self.env.accept_popup("JUNKDROP_ACK")
         self.env.cmd("all")
-        self.assertEqual(self.popup(2), "JUNKDROP_ACK")  # accepting the bar warning did not cover "all"
+        self.assertEqual(self.popup(2), "JUNKDROP_ACK")  # accepting the drop warning did not cover "all"
         self.assertFalse(self.flag("AckAll"))
 
     def test_the_loot_note_button_is_not_covered_by_either(self):
@@ -403,6 +404,85 @@ class Acknowledgements(unittest.TestCase):
         self.assertEqual(self.env.popup_count(), 0)
 
 
+class ResetConfirmation(unittest.TestCase):
+    """Reset to defaults clears everything, so the button and /jd reset both ask first."""
+
+    def setUp(self):
+        self.env = Env()
+        self.env.bag(default_bag())
+        self.env.run("ResetState()")
+        # A player who has changed things and accepted both warnings.
+        self.env.set(Label="short", Include2=True, Protect="knife", AckDrop=True, AckAll=True)
+
+    def get(self, key):
+        return self.env.ev("NS.Get('%s')" % key)
+
+    def press_button(self):
+        self.env.cmd("options")
+        self.env.run("OptionsWindow.ResetButton._OnClick()")
+
+    def changed(self):
+        return (self.get("Label"), self.get("Include2"), self.get("Protect")) == ("short", True, "knife")
+
+    def test_the_button_asks_first_and_changes_nothing_yet(self):
+        self.press_button()
+        self.assertEqual(self.env.ev("Popups[1].which"), "JUNKDROP_CONFIRM_RESET")
+        self.assertTrue(self.changed())
+        self.assertTrue(self.get("AckDrop"))
+
+    def test_typing_jd_reset_asks_first_and_changes_nothing_yet(self):
+        self.assertEqual(self.env.cmd("reset"), "")  # no chat line: the pop-up is the answer
+        self.assertEqual(self.env.ev("Popups[1].which"), "JUNKDROP_CONFIRM_RESET")
+        self.assertTrue(self.changed())
+
+    def test_the_question_says_what_will_be_lost(self):
+        text = self.env.ev("StaticPopupDialogs['JUNKDROP_CONFIRM_RESET'].text")
+        self.assertIn("Never drop words", text)
+        self.assertIn("one-time warnings", text)
+
+    def test_confirming_from_the_button_resets_everything_including_both_warnings(self):
+        self.press_button()
+        self.env.accept_popup("JUNKDROP_CONFIRM_RESET")
+        self.assertFalse(self.changed())
+        self.assertEqual((self.get("Label"), self.get("Include2"), self.get("Protect")), ("full", False, ""))
+        self.assertFalse(self.get("AckDrop"))
+        self.assertFalse(self.get("AckAll"))
+
+    def test_confirming_after_typing_jd_reset_does_the_same(self):
+        self.env.cmd("reset")
+        self.env.accept_popup("JUNKDROP_CONFIRM_RESET")
+        self.assertEqual((self.get("Label"), self.get("Include2"), self.get("Protect")), ("full", False, ""))
+        self.assertFalse(self.get("AckDrop"))
+
+    def test_cancelling_changes_nothing(self):
+        self.press_button()  # the pop-up is dismissed without pressing Reset
+        self.env.cmd("reset")
+        self.assertTrue(self.changed())
+        self.assertTrue(self.get("AckDrop"))
+
+    def test_the_warnings_really_return_after_a_confirmed_reset(self):
+        self.env.cmd("reset")
+        self.env.accept_popup("JUNKDROP_CONFIRM_RESET")
+        self.env.run('LDB.OnClick(nil, "LeftButton")')
+        self.assertEqual(self.env.ev("Popups[2].which"), "JUNKDROP_ACK")
+        self.assertEqual(self.env.deleted(), "")
+
+    def test_an_open_options_window_shows_the_defaults_afterwards(self):
+        self.env.cmd("options")
+        self.env.run("OptionsWindow.FilterBox:SetText('knife')")  # what the box shows now
+        self.env.run("OptionsWindow.ResetButton._OnClick()")
+        self.env.accept_popup("JUNKDROP_CONFIRM_RESET")
+        self.assertEqual(self.env.ev("OptionsWindow.FilterBox._text"), "")
+
+    def test_resetting_with_no_options_window_open_is_fine(self):
+        self.env.cmd("reset")
+        self.env.accept_popup("JUNKDROP_CONFIRM_RESET")
+        self.assertEqual(self.env.ev("#Errors"), 0)
+
+    def test_help_lists_it(self):
+        self.assertIn("reset", self.env.cmd("help"))
+
+
 # What a new player gets. Changing one of these changes everyone's first experience, so a test
 # pins them: change the value here on purpose, together with the README and the options window.
 EXPECTED_DEFAULTS = {
@@ -411,7 +491,7 @@ EXPECTED_DEFAULTS = {
     "Include0": True, "Include1": False, "Include2": False, "Include3": False, "Include4": False,
     "Order": "quality", "ConfirmHigher": True, "Protect": "",
     "Glow": True, "LootNote": True, "LootDrop": True,
-    "AckClick": False, "AckAll": False,
+    "AckDrop": False, "AckAll": False,
 }
 
 

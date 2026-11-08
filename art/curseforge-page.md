@@ -54,11 +54,11 @@ Type `/jd` or `/junkdrop`:
 - `/jd` deletes the next stack in line. `/jd 3` deletes the next 3. `/jd all` deletes everything that qualifies.
 - `/jd list` shows the next stack without deleting anything, so you can decide whether a new item is worth looting. `/jd list 3` and `/jd list all` show more.
 - `/jd debug` shows every stack in drop order.
-- `/jd options` opens the settings window. `/jd help` lists the commands.
+- `/jd options` opens the settings window. `/jd reset` resets every setting (it asks first). `/jd help` lists the commands.
 
 ### On your bar
 
-JunkDrop adds an item to data-broker bars (EllesmereUI, ElvUI DataTexts, Titan Panel and others). It shows the next stack and its value, with colored dots for the qualities you've chosen. Hover to see the next few stacks, left-click to delete the first one, right-click for settings. The first time you click to delete, and the first time you use `/jd all`, a one-time warning asks you to confirm.
+JunkDrop adds an item to data-broker bars (EllesmereUI, ElvUI DataTexts, Titan Panel and others). It shows the next stack and its value, with colored dots for the qualities you've chosen. Hover to see the next few stacks, left-click to delete the first one, right-click for settings. The first time you delete with a click or with `/jd`, and the first time you use `/jd all`, a one-time warning asks you to confirm.
 
 ### Glow in your bags
 
