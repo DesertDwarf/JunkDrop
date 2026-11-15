@@ -44,6 +44,14 @@ class Toc(unittest.TestCase):
         # The packager uploads to this project; a wrong or missing id publishes nowhere or elsewhere.
         self.assertEqual(toc_header("X-Curse-Project-ID"), "24848")
 
+    def test_the_addons_menu_grouping_is_set(self):
+        # Category files JunkDrop under a header in the AddOns list. There are no sub-modules, so no Group line.
+        self.assertEqual(toc_header("Category"), "Bags & Inventory")
+        self.assertIsNone(toc_header("Group"))
+        icon = toc_header("IconTexture")
+        self.assertEqual(icon, "Interface\\AddOns\\JunkDrop\\JunkDrop-LDB-icon")
+        self.assertTrue(os.path.exists(os.path.join(ROOT, icon.split("\\")[-1] + ".tga")))
+
     def test_the_saved_variable_matches_the_code(self):
         self.assertEqual(toc_header("SavedVariables"), "JunkDropDB")
 
